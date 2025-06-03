@@ -56,6 +56,8 @@ local function isJsonObject(value)
 	return mt == nil or mt.__jsontype == "object"
 end
 
+---@param luarcPath string
+---@return { [string]: any }
 local function readLuarc(luarcPath)
 	local luarc ---@type table
 	if fs.exists(luarcPath) then
@@ -74,8 +76,24 @@ local function readLuarc(luarcPath)
 	return luarc
 end
 
+---@param keyorder string[]
+---@param obj { [string]: any }
+local function getRecursiveKeys(keyorder, obj)
+	for k, v in pairs(obj) do
+		table.insert(keyorder, k)
+		if type(v) == "table" and #v <= 0 then
+			getRecursiveKeys(keyorder, v)
+		end
+	end
+end
+
+---@param luarc { [string]: any }
+---@param luarcPath string
 local function writeLuarc(luarc, luarcPath)
-	local contents = json.encode(luarc, { indent = 2 }) --[[@as string]]
+	local keyorder = {} ---@type string[]
+	getRecursiveKeys(keyorder, luarc)
+	table.sort(keyorder)
+	local contents = json.encode(luarc, { indent = 2, keyorder = keyorder }) --[[@as string]]
 	local file <close> = assert(io.open(luarcPath, "w"))
 	file:write(contents)
 end
@@ -112,10 +130,6 @@ local function copyConfigSettings(source, luarc, luarcPath)
 	end
 
 	extend(luarc, settingsNoPrefix)
-
-	local contents = json.encode(luarc, { indent = 2 }) --[[@as string]]
-	local file <close> = assert(io.open(luarcPath, "w"))
-	file:write(contents)
 end
 
 local function copyFile(source, destination)
