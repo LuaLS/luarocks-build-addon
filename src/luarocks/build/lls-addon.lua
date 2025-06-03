@@ -56,6 +56,82 @@ local function isJsonObject(value)
 	return mt == nil or mt.__jsontype == "object"
 end
 
+local function readLuarc(luarcPath)
+	local luarc ---@type table
+	if fs.exists(luarcPath) then
+		print("Found " .. luarcPath)
+		local file <close> = assert(io.open(luarcPath, "r"))
+		local contents = file:read("a")
+		luarc = json.decode(contents) --[[@as table]]
+		if not isJsonObject(luarc) then
+			error("Expected root of '.luarc.json' to be an object")
+		end
+	else
+		print(luarcPath .. " not found, generating...")
+		luarc = {}
+	end
+
+	return luarc
+end
+
+local function writeLuarc(luarc, luarcPath)
+	local contents = json.encode(luarc, { indent = 2 }) --[[@as string]]
+	local file <close> = assert(io.open(luarcPath, "w"))
+	file:write(contents)
+end
+
+---@param source string
+---@param luarc table
+---@param luarcPath string
+local function copyConfigSettings(source, luarc, luarcPath)
+	-- also decode it and copy the settings into .luarc.json
+	local config
+	do
+		local file = assert(io.open(source))
+		local contents = file:read("a")
+		file:close()
+		config = json.decode(contents) --[[@as table]]
+	end
+
+	if not isJsonObject(config) then
+		print("Root of 'config.json' is not an object, skipping")
+		return
+	end
+
+	local settings = config.settings ---@type { [string]: any }
+	if not isJsonObject(settings) then
+		print("key 'settings' of " .. source .. " is not an object, skipping")
+		return
+	end
+
+	print("Merging 'settings' object into " .. luarcPath)
+	local settingsNoPrefix = {} ---@type { [string]: any }
+	for k, v in pairs(settings) do
+		local newK = k:match("^Lua%.(.*)$")
+		settingsNoPrefix[newK] = v
+	end
+
+	extend(luarc, settingsNoPrefix)
+
+	local contents = json.encode(luarc, { indent = 2 }) --[[@as string]]
+	local file <close> = assert(io.open(luarcPath, "w"))
+	file:write(contents)
+end
+
+local function copyFile(source, destination)
+	print("Installing " .. source .. " to " .. destination)
+	assert(fs.copy(source, destination))
+end
+
+---@param source string
+---@param destination string
+local function copyDirectory(source, destination)
+	print("Installing " .. source .. " to " .. destination)
+
+	assert(fs.make_dir(destination))
+	assert(fs.copy_contents(source, destination))
+end
+
 ---@param rockspec luarocks.rockspec
 ---@return boolean?, string?
 function M.run(rockspec)
@@ -70,55 +146,34 @@ function M.run(rockspec)
 
 	local librarySource = dir.path(fs.current_dir(), "library")
 	if fs.exists(librarySource) then
-		local libraryDestination = dir.path(installDirectory, "library")
-		print("Installing " .. librarySource .. " to " .. libraryDestination)
+		copyDirectory(librarySource, dir.path(installDirectory, "library"))
+	end
 
-		assert(fs.make_dir(libraryDestination))
-		assert(fs.copy_contents(librarySource, libraryDestination))
+	local luarcPath = dir.path(cfg.project_dir, ".luarc.json")
+
+	local luarc ---@type table
+
+	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
+	if fs.exists(pluginSource) then
+		local pluginDestination = dir.path(installDirectory, "plugin.lua")
+		copyFile(pluginSource, pluginDestination)
+
+		-- also set 'runtime.plugin' in .luarc.json
+		luarc = luarc or readLuarc(luarcPath)
+		luarc["runtime.plugin"] = pluginDestination
 	end
 
 	local configSource = dir.path(fs.current_dir(), "config.json")
 	if fs.exists(configSource) then
-		local configDestination = dir.path(installDirectory, "config.json")
+		copyFile(configSource, dir.path(installDirectory, "config.json"))
 
-		print("Installing " .. configSource .. " to " .. configDestination)
-		assert(fs.copy(configSource, configDestination))
+		-- also merge 'settings' from 'config.json' into .luarc.json
+		luarc = luarc or readLuarc(luarcPath)
+		copyConfigSettings(configSource, luarc, luarcPath)
+	end
 
-		-- also decode it and copy the settings into .luarc.json
-		local config
-		do
-			local file = assert(io.open(configSource))
-			local contents = file:read("a")
-			file:close()
-			config = json.decode(contents) --[[@as table]]
-		end
-
-		if not isJsonObject(config) then
-			print("Root of 'config.json' is not an object, skipping")
-		elseif config.settings then
-			local luarcPath = dir.path(cfg.project_dir, ".luarc.json")
-			print("Copying key 'settings' to " .. luarcPath)
-
-			local luarc ---@type table
-			if fs.exists(luarcPath) then
-				print("Found " .. luarcPath)
-				local file <close> = assert(io.open(luarcPath, "r"))
-				local contents = file:read("a")
-				luarc = json.decode(contents) --[[@as table]]
-				if not isJsonObject(luarc) then
-					error("Expected root of '.luarc.json' to be an object")
-				end
-			else
-				print(luarcPath .. " not found, generating...")
-				luarc = {}
-			end
-
-			extend(luarc, config.settings)
-
-			local contents = json.encode(luarc, { indent = 2 }) --[[@as string]]
-			local file <close> = assert(io.open(luarcPath, "w"))
-			file:write(contents)
-		end
+	if luarc then
+		writeLuarc(luarc, luarcPath)
 	end
 
 	return true
