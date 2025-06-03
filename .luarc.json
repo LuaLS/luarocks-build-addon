@@ -1,0 +1,6 @@
+{
+    "workspace.library": [
+        "$USERPROFILE/Documents/References/luarocks/src"
+    ],
+    "runtime.version": "Lua 5.4"
+}
