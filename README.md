@@ -2,7 +2,7 @@
 
 1. Start by cloning this repo.
 
-2. `luarocks build --local` to build this rock locally so it can be used to build other rocks
+2. `luarocks --local --lua-version=5.4 make` to build this rock locally so it can be used to build other rocks
 
 3. For testing, clone an addon. I have been using the [cc-tweaked documentation addon](https://gitlab.com/carsakiller/cc-tweaked-documentation).
 
