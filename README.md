@@ -9,12 +9,13 @@
 4. Within that cloned addon, create a `.rockspec`, like below:
 
 `cc-tweaked-dev-1.rockspec`
+
 ```lua
 rockspec_format = "3.0"
 package = "cc-tweaked"
 version = "dev-1"
 source = {
-   url = "git+ssh://git@gitlab.com/carsakiller/cc-tweaked-documentation"
+   url = "https://gitlab.com/carsakiller/cc-tweaked-documentation"
 }
 description = {
    summary = "LuaCATS annotations for CC:Tweaked",
@@ -27,45 +28,13 @@ build = {
 }
 ```
 
-5. Now we need to create the final repo for the actual project that needs the addon's types. All it needs is a `.rockspec` like below:
+5. Try to install the repo by running `luarocks make`. This will use the custom build backend to copy some directories/files and modify/create the `.luarc.json` file to make LuaLS aware.
 
-`some-package-dev-1.rockspec`
-```lua
-rockspec_format = "3.0"
-package = "some-package"
-version = "dev-1"
-source = {
-   url = "some_link_not_important"
-}
-description = {
-   summary = "***",
-   detailed = "***",
-   homepage = "***",
-   license = "MIT"
-}
-build_dependencies = {
-	"cc-tweaked"
-}
-build = {
-	type = "builtin"
-}
-```
+6. You should see that there is a `.luarc.json` in the `cc-tweaked`'s project directory with all the required keys filled in.
 
-6. Now if we are to build this project (`luarocks build --local`) the custom backend is used to install the cc-tweaked addon.
-
-7. Add install path to `.luarc.json` under [`workspace.library`](https://luals.github.io/wiki/settings/#workspacelibrary) to tell LuaLS where the types are. Example:
-
-`.luarc.json`
-```json
-{
-	"workspace.library": [
-		"${env:HOME}/.luarocks/lib/luarocks/rocks-5.4/"
-	]
-}
-```
 Now you should have types! This step obviously still needs a lot of work to automatically apply the path and deal with global/local installs, etc.
 
-Addon settings are not handled by this yet.
+You can try adding plugins or other settings to see if everything is working as intended.
 
 ---
 
