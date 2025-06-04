@@ -52,7 +52,7 @@ end
 ---@param new any
 ---@return any
 local function extend(old, new)
-  	if isJsonArray(old) and isJsonArray(new) then -- treat arrays like sets
+	if isJsonArray(old) and isJsonArray(new) then -- treat arrays like sets
 		for _, v in ipairs(new) do
 			if not contains(old, v) then
 				table.insert(old, v)
