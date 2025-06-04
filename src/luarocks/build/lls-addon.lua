@@ -52,7 +52,7 @@ end
 
 ---modifies `old` such that it contains all the properties of `new`. Arrays are
 ---treated like sets, so any new values will only be inserted if the array
----doesn't contain it
+---doesn't contain it.
 ---@param old any
 ---@param new any
 ---@return any
