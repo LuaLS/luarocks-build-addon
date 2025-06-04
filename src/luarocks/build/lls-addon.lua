@@ -9,6 +9,14 @@ local M = {}
 local arrayMt = { __jsontype = "array" }
 local objectMt = { __jsontype = "object" }
 
+local function assertContext(context, ...)
+	local s, msg = ...
+	if not s then
+		error(context .. ": " .. msg)
+	end
+	return ...
+end
+
 ---@param value any
 ---@return boolean
 local function isJsonObject(value)
@@ -78,7 +86,7 @@ end
 ---@param sourcePath string
 ---@return any
 local function readJsonFile(sourcePath)
-	local file <close> = assert(io.open(sourcePath))
+	local file <close> = assertContext("when opening " .. sourcePath, io.open(sourcePath))
 	local contents = file:read("a")
 	return json.decode(contents, nil, json.null, objectMt, arrayMt)
 end
@@ -126,8 +134,8 @@ local function writeLuarc(luarc, luarcPath)
 	getRecursiveKeys(keyorder, luarc)
 	table.sort(keyorder)
 	local contents = json.encode(luarc, { indent = 2, keyorder = keyorder }) --[[@as string]]
-	local file <close> = assert(io.open(luarcPath, "w"))
-	file:write(contents)
+	local file <close> = assertContext("when opening " .. luarcPath, io.open(luarcPath, "w")) --[[@as file*]]
+	assertContext("when writing to .luarc.json", file:write(contents))
 end
 
 ---merges ('config.json').settings into .luarc.json
@@ -177,7 +185,7 @@ end
 ---@param destination string
 local function copyFile(source, destination)
 	print("Installing " .. source .. " to " .. destination)
-	assert(fs.copy(source, destination))
+	assertContext("when copying into" .. destination, fs.copy(source, destination))
 end
 
 ---@param source string
@@ -185,8 +193,8 @@ end
 local function copyDirectory(source, destination)
 	print("Installing " .. source .. " to " .. destination)
 
-	assert(fs.make_dir(destination))
-	assert(fs.copy_contents(source, destination))
+	assertContext("when creating " .. destination, fs.make_dir(destination))
+	assertContext("when copying files into " .. destination, fs.copy_contents(source, destination))
 end
 
 ---does two things:
@@ -244,7 +252,7 @@ end
 ---@param rockspec luarocks.rockspec
 ---@return boolean?, string?
 function M.run(rockspec)
-	assert(rockspec:type() == "rockspec")
+	assert(rockspec:type() == "rockspec", "argument is not a rockspec")
 
 	local s, msg = pcall(addFiles, rockspec)
 	if not s then
