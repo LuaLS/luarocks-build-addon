@@ -207,11 +207,16 @@ local function addFiles(rockspec)
 	local name = rockspec.package
 	local version = rockspec.version
 
+	local projectDir = cfg.project_dir
+	if not projectDir then
+		error("[BuildError]: Run 'luarocks init' before building this addon.")
+	end
+
 	print("Building addon " .. name .. " @ " .. version)
 
 	local installDirectory = path.install_dir(name, version)
 
-	local luarcPath = dir.path(cfg.project_dir, ".luarc.json")
+	local luarcPath = dir.path(projectDir, ".luarc.json")
 
 	local luarc ---@type { [string]: any }
 
