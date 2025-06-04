@@ -140,6 +140,9 @@ local function copyConfigSettings(source, luarc)
 	local settingsNoPrefix = setmetatable({}, objectMt) ---@type { [string]: any }
 	for k, v in pairs(settings) do
 		local newK = k:match("^Lua%.(.*)$")
+		if not newK then
+			error("expected key '" .. k .. "' to start with 'Lua.'")
+		end
 		settingsNoPrefix[newK] = v
 	end
 
@@ -161,9 +164,10 @@ end
 
 ---@param source string
 ---@param destination string
+---@return boolean, string?
 local function copyFile(source, destination)
 	print("Installing " .. source .. " to " .. destination)
-	assert(fs.copy(source, destination))
+	return fs.copy(source, destination) --[[@as any]]
 end
 
 ---@param source string
@@ -176,10 +180,7 @@ local function copyDirectory(source, destination)
 end
 
 ---@param rockspec luarocks.rockspec
----@return boolean?, string?
-function M.run(rockspec)
-	assert(rockspec:type() == "rockspec")
-
+local function addFiles(rockspec)
 	local name = rockspec.package
 	local version = rockspec.version
 
@@ -188,6 +189,7 @@ function M.run(rockspec)
 	local installDirectory = path.install_dir(name, version)
 
 	local luarcPath = dir.path(cfg.project_dir, ".luarc.json")
+
 	local luarc ---@type { [string]: any }
 
 	local librarySource = dir.path(fs.current_dir(), "library")
@@ -222,8 +224,14 @@ function M.run(rockspec)
 	if luarc then
 		writeLuarc(luarc, luarcPath)
 	end
+end
 
-	return true
+---@param rockspec luarocks.rockspec
+---@return boolean?, string?
+function M.run(rockspec)
+	assert(rockspec:type() == "rockspec")
+
+	return pcall(addFiles, rockspec)
 end
 
 return M
