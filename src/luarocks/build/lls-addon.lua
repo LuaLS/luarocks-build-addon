@@ -233,7 +233,7 @@ function M.run(rockspec)
 	local s, msg = pcall(addFiles, rockspec)
 	if not s then
 		---@cast msg string
-		local match = msg:match("^%[BuildError%]%: (.*)$")
+		local match = msg:match("%[BuildError%]%: (.*)$")
 		if match then
 			return false, match
 		else
