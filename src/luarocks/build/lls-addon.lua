@@ -200,18 +200,20 @@ end
 ---does two things:
 ---- copies the library/, config.json and plugin.lua into the rock's install
 ---  directory
----- modifies or creates a project-local `.luarc.json`, which will contain
+---- modifies or creates a project-scoped `.luarc.json`, which will contain
 ---  references to the above copied files
 ---@param rockspec luarocks.rockspec
 local function addFiles(rockspec)
-	local name = rockspec.package
-	local version = rockspec.version
-
-	local projectDir = cfg.project_dir
+	local projectDir = cfg.project_dir --[[@as string]]
 	if not projectDir then
-		error("[BuildError]: Run 'luarocks init' before building this addon.")
+		print("project directory not found, defaulting to working directory")
+		assertContext("when changing to working directory", fs.change_dir("."))
+		projectDir = fs.current_dir()
+		assert(fs.pop_dir(), "unable to find source directory")
 	end
 
+	local name = rockspec.package
+	local version = rockspec.version
 	print("Building addon " .. name .. " @ " .. version)
 
 	local installDirectory = path.install_dir(name, version)
