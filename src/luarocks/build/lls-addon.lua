@@ -6,71 +6,90 @@ local json = require("luarocks.vendor.dkjson")
 
 local M = {}
 
-local function deepEqual(a, b)
-  if type(a) == "table" and type(b) == "table" then
-    for k, v in pairs(a) do
-      if b[k] ~= v then
-        return false
-      end
-    end
-    return true
-  else
-    return a == b
-  end
-end
+local arrayMt = { __jsontype = "array" }
+local objectMt = { __jsontype = "object" }
 
-local function contains(array, value)
-  for _, v in ipairs(array) do
-    if deepEqual(v, value) then
-      return true
-    end
-  end
-  return false
-end
-
-local function extend(old, new)
-  if type(old) == "table" and type(new) == "table" then
-    if #old > 0 and #new > 0 then -- treat arrays like sets
-      for _, v in ipairs(new) do
-        if not contains(old, v) then
-          table.insert(old, v)
-        end
-      end
-    else
-      for k, v in pairs(new) do
-        old[k] = extend(old[k], v)
-      end
-    end
-    return old
-  else
-    return new
-  end
-end
-
+---@param value any
+---@return boolean
 local function isJsonObject(value)
-	if type(value) ~= "table" then
-		return false
-	end
+	return type(value) == "table" and getmetatable(value) == objectMt
+end
 
-	local mt = getmetatable(value)
-	return mt == nil or mt.__jsontype == "object"
+---@param value any
+---@return boolean
+local function isJsonArray(value)
+	return type(value) == "table" and getmetatable(value) == arrayMt
+end
+
+---@param a any
+---@param b any
+local function deepEqual(a, b)
+	if type(a) == "table" and type(b) == "table" then
+		for k, v in pairs(a) do
+			if b[k] ~= v then
+				return false
+			end
+		end
+		return true
+	else
+		return a == b
+	end
+end
+
+---@param array any[]
+---@param value any
+---@return boolean
+local function contains(array, value)
+	for _, v in ipairs(array) do
+		if deepEqual(v, value) then
+			return true
+		end
+	end
+	return false
+end
+
+---@param old any
+---@param new any
+---@return any
+local function extend(old, new)
+  	if isJsonArray(old) and isJsonArray(new) then -- treat arrays like sets
+		for _, v in ipairs(new) do
+			if not contains(old, v) then
+				table.insert(old, v)
+			end
+		end
+		return old
+	elseif isJsonObject(old) and isJsonObject(new) then
+		for k, v in pairs(new) do
+			old[k] = extend(old[k], v)
+		end
+		return old
+	else
+		return new
+	end
+end
+
+---@param sourcePath string
+---@return any
+local function readJsonFile(sourcePath)
+	local file <close> = assert(io.open(sourcePath))
+	local contents = file:read("a")
+	return json.decode(contents, nil, json.null, objectMt, arrayMt)
 end
 
 ---@param luarcPath string
----@return { [string]: any }
+---@return { [string]: any } luarc
 local function readLuarc(luarcPath)
-	local luarc ---@type table
+	local luarc ---@type { [string]: any }
 	if fs.exists(luarcPath) then
 		print("Found " .. luarcPath)
-		local file <close> = assert(io.open(luarcPath, "r"))
-		local contents = file:read("a")
-		luarc = json.decode(contents) --[[@as table]]
+		luarc = readJsonFile(luarcPath) --[[@as { [string]: any }]]
 		if not isJsonObject(luarc) then
 			error("Expected root of '.luarc.json' to be an object")
 		end
 	else
 		print(luarcPath .. " not found, generating...")
-		luarc = {}
+		luarc = setmetatable({}, objectMt)
 	end
 
 	return luarc
@@ -81,7 +100,7 @@ end
 local function getRecursiveKeys(keyorder, obj)
 	for k, v in pairs(obj) do
 		table.insert(keyorder, k)
-		if type(v) == "table" and #v <= 0 then
+		if isJsonObject(v) then
 			getRecursiveKeys(keyorder, v)
 		end
 	end
@@ -100,35 +119,31 @@ end
 
 ---@param source string
 ---@param luarc table
+---@return table luarc
 local function copyConfigSettings(source, luarc)
 	-- also decode it and copy the settings into .luarc.json
-	local config
-	do
-		local file = assert(io.open(source))
-		local contents = file:read("a")
-		file:close()
-		config = json.decode(contents) --[[@as table]]
-	end
+	local config = readJsonFile(source) --[[@as { [string]: any }]]
 
 	if not isJsonObject(config) then
 		print("Root of 'config.json' is not an object, skipping")
-		return
+		return luarc
 	end
 
-	local settings = config.settings ---@type { [string]: any }
+	local settings = config.settings
 	if not isJsonObject(settings) then
 		print("key 'settings' of " .. source .. " is not an object, skipping")
-		return
+		return luarc
 	end
+	---@cast settings { [string]: any }
 
 	print("Merging 'settings' object into .luarc.json")
-	local settingsNoPrefix = {} ---@type { [string]: any }
+	local settingsNoPrefix = setmetatable({}, objectMt) ---@type { [string]: any }
 	for k, v in pairs(settings) do
 		local newK = k:match("^Lua%.(.*)$")
 		settingsNoPrefix[newK] = v
 	end
 
-	extend(luarc, settingsNoPrefix)
+	return extend(luarc, settingsNoPrefix)
 end
 
 ---@param destination string
@@ -136,14 +151,16 @@ end
 local function insertLibrary(destination, luarc)
 	print("Adding " .. destination .. " to 'workspace.library' of .luarc.json")
 	local library = luarc["workspace.library"]
-	if not library then
-		luarc["workspace.library"] = { destination }
+	if not isJsonArray(library) then
+		luarc["workspace.library"] = setmetatable({ destination }, arrayMt)
 	elseif not contains(library, destination) then
 		table.insert(library, destination)
 		table.sort(library)
 	end
 end
 
+---@param source string
+---@param destination string
 local function copyFile(source, destination)
 	print("Installing " .. source .. " to " .. destination)
 	assert(fs.copy(source, destination))
@@ -199,7 +216,7 @@ function M.run(rockspec)
 
 		-- also merge 'settings' from 'config.json' into .luarc.json
 		luarc = luarc or readLuarc(luarcPath)
-		copyConfigSettings(configSource, luarc)
+		luarc = copyConfigSettings(configSource, luarc)
 	end
 
 	if luarc then
