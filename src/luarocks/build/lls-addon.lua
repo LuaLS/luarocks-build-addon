@@ -85,7 +85,7 @@ local function readLuarc(luarcPath)
 		print("Found " .. luarcPath)
 		luarc = readJsonFile(luarcPath) --[[@as { [string]: any }]]
 		if not isJsonObject(luarc) then
-			error("Expected root of '.luarc.json' to be an object")
+			error("[BuildError]: Expected root of '.luarc.json' to be an object")
 		end
 	else
 		print(luarcPath .. " not found, generating...")
@@ -141,7 +141,7 @@ local function copyConfigSettings(source, luarc)
 	for k, v in pairs(settings) do
 		local newK = k:match("^Lua%.(.*)$")
 		if not newK then
-			error("expected key '" .. k .. "' to start with 'Lua.'")
+			error("[BuildError]: expected key '" .. k .. "' of 'settings' object to start with 'Lua.'")
 		end
 		settingsNoPrefix[newK] = v
 	end
@@ -164,10 +164,9 @@ end
 
 ---@param source string
 ---@param destination string
----@return boolean, string?
 local function copyFile(source, destination)
 	print("Installing " .. source .. " to " .. destination)
-	return fs.copy(source, destination) --[[@as any]]
+	assert(fs.copy(source, destination))
 end
 
 ---@param source string
@@ -231,7 +230,17 @@ end
 function M.run(rockspec)
 	assert(rockspec:type() == "rockspec")
 
-	return pcall(addFiles, rockspec)
+	local s, msg = pcall(addFiles, rockspec)
+	if not s then
+		---@cast msg string
+		local match = msg:match("^%[BuildError%]%: (.*)$")
+		if match then
+			return false, match
+		else
+			error(msg)
+		end
+	end
+	return true
 end
 
 return M
