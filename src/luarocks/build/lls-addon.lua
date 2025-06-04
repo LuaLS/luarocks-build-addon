@@ -21,13 +21,14 @@ local function isJsonArray(value)
 	return type(value) == "table" and getmetatable(value) == arrayMt
 end
 
----checks if all fields of `a` is equal to all fields of `b`
+---checks if all fields of `a` is equal to all fields of `b`. Only the keys of
+---`a` are iterated through.
 ---@param a any
 ---@param b any
 local function deepEqual(a, b)
 	if type(a) == "table" and type(b) == "table" then
 		for k, v in pairs(a) do
-			if b[k] ~= v then
+			if not deepEqual(v, b[k]) then
 				return false
 			end
 		end
