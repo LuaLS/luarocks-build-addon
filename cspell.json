@@ -1,6 +1,8 @@
 {
     "words": [
         "keyorder",
-        "luarc"
+        "luarc",
+        "luarocks",
+        "rockspec"
     ]
 }
