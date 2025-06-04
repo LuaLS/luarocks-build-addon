@@ -100,8 +100,7 @@ end
 
 ---@param source string
 ---@param luarc table
----@param luarcPath string
-local function copyConfigSettings(source, luarc, luarcPath)
+local function copyConfigSettings(source, luarc)
 	-- also decode it and copy the settings into .luarc.json
 	local config
 	do
@@ -122,7 +121,7 @@ local function copyConfigSettings(source, luarc, luarcPath)
 		return
 	end
 
-	print("Merging 'settings' object into " .. luarcPath)
+	print("Merging 'settings' object into .luarc.json")
 	local settingsNoPrefix = {} ---@type { [string]: any }
 	for k, v in pairs(settings) do
 		local newK = k:match("^Lua%.(.*)$")
@@ -130,6 +129,19 @@ local function copyConfigSettings(source, luarc, luarcPath)
 	end
 
 	extend(luarc, settingsNoPrefix)
+end
+
+---@param destination string
+---@param luarc { [string]: any }
+local function insertLibrary(destination, luarc)
+	print("Adding " .. destination .. " to 'workspace.library' of .luarc.json")
+	local library = luarc["workspace.library"]
+	if not library then
+		luarc["workspace.library"] = { destination }
+	elseif not contains(library, destination) then
+		table.insert(library, destination)
+		table.sort(library)
+	end
 end
 
 local function copyFile(source, destination)
@@ -158,14 +170,18 @@ function M.run(rockspec)
 
 	local installDirectory = path.install_dir(name, version)
 
+	local luarcPath = dir.path(cfg.project_dir, ".luarc.json")
+	local luarc ---@type { [string]: any }
+
 	local librarySource = dir.path(fs.current_dir(), "library")
 	if fs.exists(librarySource) then
-		copyDirectory(librarySource, dir.path(installDirectory, "library"))
+		local libraryDestination = dir.path(installDirectory, "library")
+		copyDirectory(librarySource, libraryDestination)
+
+		-- also insert the library/ directory into 'workspace.library'
+		luarc = luarc or readLuarc(luarcPath)
+		insertLibrary(libraryDestination, luarc)
 	end
-
-	local luarcPath = dir.path(cfg.project_dir, ".luarc.json")
-
-	local luarc ---@type table
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
 	if fs.exists(pluginSource) then
@@ -183,7 +199,7 @@ function M.run(rockspec)
 
 		-- also merge 'settings' from 'config.json' into .luarc.json
 		luarc = luarc or readLuarc(luarcPath)
-		copyConfigSettings(configSource, luarc, luarcPath)
+		copyConfigSettings(configSource, luarc)
 	end
 
 	if luarc then
