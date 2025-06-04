@@ -98,9 +98,13 @@ end
 ---@param keyorder string[]
 ---@param obj { [string]: any }
 local function getRecursiveKeys(keyorder, obj)
-	for k, v in pairs(obj) do
-		table.insert(keyorder, k)
-		if isJsonObject(v) then
+	if isJsonObject(obj) then
+		for k, v in pairs(obj) do
+			table.insert(keyorder, k)
+			getRecursiveKeys(keyorder, v)
+		end
+	elseif isJsonArray(obj) then
+		for _, v in ipairs(obj) do
 			getRecursiveKeys(keyorder, v)
 		end
 	end
