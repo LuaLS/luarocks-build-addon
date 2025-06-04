@@ -21,6 +21,7 @@ local function isJsonArray(value)
 	return type(value) == "table" and getmetatable(value) == arrayMt
 end
 
+---checks if all fields of `a` is equal to all fields of `b`
 ---@param a any
 ---@param b any
 local function deepEqual(a, b)
@@ -36,6 +37,7 @@ local function deepEqual(a, b)
 	end
 end
 
+---checks if there is any element in `array` that is deeply equal to `value`
 ---@param array any[]
 ---@param value any
 ---@return boolean
@@ -48,6 +50,9 @@ local function contains(array, value)
 	return false
 end
 
+---modifies `old` such that it contains all the properties of `new`. Arrays are
+---treated like sets, so any new values will only be inserted if the array
+---doesn't contain it
 ---@param old any
 ---@param new any
 ---@return any
@@ -77,6 +82,7 @@ local function readJsonFile(sourcePath)
 	return json.decode(contents, nil, json.null, objectMt, arrayMt)
 end
 
+---reads .luarc.json into a table, or returns a new one if it doesn't exist
 ---@param luarcPath string
 ---@return { [string]: any } luarc
 local function readLuarc(luarcPath)
@@ -95,6 +101,7 @@ local function readLuarc(luarcPath)
 	return luarc
 end
 
+---gets all keys from a json object
 ---@param keyorder string[]
 ---@param obj { [string]: any }
 local function getRecursiveKeys(keyorder, obj)
@@ -110,6 +117,7 @@ local function getRecursiveKeys(keyorder, obj)
 	end
 end
 
+---writes the given table into .luarc.json
 ---@param luarc { [string]: any }
 ---@param luarcPath string
 local function writeLuarc(luarc, luarcPath)
@@ -121,6 +129,7 @@ local function writeLuarc(luarc, luarcPath)
 	file:write(contents)
 end
 
+---merges ('config.json').settings into .luarc.json
 ---@param source string
 ---@param luarc table
 ---@return table luarc
@@ -149,6 +158,7 @@ local function copyConfigSettings(source, luarc)
 	return extend(luarc, settingsNoPrefix)
 end
 
+---pushes the library/ path to the 'workspace.library' array
 ---@param destination string
 ---@param luarc { [string]: any }
 local function insertLibrary(destination, luarc)
@@ -178,6 +188,11 @@ local function copyDirectory(source, destination)
 	assert(fs.copy_contents(source, destination))
 end
 
+---does two things:
+---- copies the library/, config.json and plugin.lua into the rock's install
+---  directory
+---- modifies or creates a project-local `.luarc.json`, which will contain
+---  references to the above copied files
 ---@param rockspec luarocks.rockspec
 local function addFiles(rockspec)
 	local name = rockspec.package
