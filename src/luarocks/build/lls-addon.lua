@@ -139,11 +139,7 @@ local function copyConfigSettings(source, luarc)
 	print("Merging 'settings' object into .luarc.json")
 	local settingsNoPrefix = setmetatable({}, objectMt) ---@type { [string]: any }
 	for k, v in pairs(settings) do
-		local newK = k:match("^Lua%.(.*)$")
-		if not newK then
-			error("[BuildError]: expected key '" .. k .. "' of 'settings' object to start with 'Lua.'")
-		end
-		settingsNoPrefix[newK] = v
+		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
 	end
 
 	return extend(luarc, settingsNoPrefix)
