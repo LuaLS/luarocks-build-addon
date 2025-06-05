@@ -1,6 +1,14 @@
 {
     "workspace.library": [
-        "$USERPROFILE/Documents/References/luarocks/src"
+        "$USERPROFILE/Documents/References/luarocks/src",
+        "${addons}/luafilesystem/module/library",
+        "${addons}/busted/module/library",
+        "${3rd}/luassert/library",
+        "lua_modules/share/lua/5.4"
     ],
-    "runtime.version": "Lua 5.4"
+    "runtime.version": "Lua 5.4",
+    "diagnostics.globals": [
+        "lfs"
+    ],
+    "workspace.checkThirdParty": false
 }

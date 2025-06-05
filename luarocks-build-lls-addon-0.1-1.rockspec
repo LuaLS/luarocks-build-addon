@@ -9,3 +9,10 @@ description = {
    homepage = "https://github.com/LuaLS/luarocks-build-addon",
    license = "MIT",
 }
+
+test_dependencies = {
+   "busted ~> 2.2",
+   "luafilesystem ~> 1.8",
+   "inspect ~> 3.1",
+   "lua-cjson ~> 2.1.0"
+}
