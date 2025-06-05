@@ -1,6 +1,5 @@
 local lfs = require("lfs")
 local json = require("cjson")
-local inspect = require("inspect")
 
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
