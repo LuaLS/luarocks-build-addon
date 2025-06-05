@@ -1,9 +1,11 @@
 local lfs = require("lfs")
 local json = require("cjson")
--- local inspect = require("inspect")
+local inspect = require("inspect")
+
+assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
 local SEP = package.config:sub(1, 1)
-local RMDIR_CMD = SEP == "\\" and "rmdir /S /Q %s" or "rmdir -rf %s"
+local RMDIR_CMD = SEP == "\\" and "rmdir /S /Q %s" or "rm -rf %s"
 local RM_CMD = SEP == "\\" and "del %s" or "rm %s"
 
 lfs.chdir("spec")
@@ -38,10 +40,10 @@ end
 
 local function makeProject(dir)
 	return os.execute(table.concat({
-		("pushd %s"):format(dir),
+		("cd %s"):format(dir),
 		"luarocks init --no-wrapper-scripts --no-gitignore",
 		"luarocks make",
-		"popd",
+		"cd ..",
 	}, " && "))
 end
 
@@ -49,14 +51,14 @@ end
 ---@param dirPaths string[]
 ---@param filePaths string[]
 local function cleanProject(dir, dirPaths, filePaths)
-	local commands = { ("pushd %s"):format(dir) }
+	local commands = { ("cd %s"):format(dir) }
 	for _, path in ipairs(dirPaths) do
 		table.insert(commands, RMDIR_CMD:format(path))
 	end
 	for _, path in ipairs(filePaths) do
 		table.insert(commands, RM_CMD:format(path))
 	end
-	table.insert(commands, "popd")
+	table.insert(commands, "cd ..")
 
 	return os.execute(table.concat(commands, " && "))
 end
