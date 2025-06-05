@@ -38,7 +38,9 @@ local function installDir(dir, ...)
 	return path(dir, "lua_modules", "lib", "luarocks", "rocks-5.4", dir, "0.1-1", ...)
 end
 
+---@param dir string
 local function makeProject(dir)
+	assert(dir:sub(1, 1) ~= "/", "don't pass paths starting at root")
 	return os.execute(table.concat({
 		("cd %s"):format(dir),
 		"luarocks init --no-wrapper-scripts --no-gitignore > NUL",
@@ -51,12 +53,15 @@ end
 ---@param dirPaths string[]
 ---@param filePaths string[]
 local function cleanProject(dir, dirPaths, filePaths)
+	assert(dir:sub(1, 1) ~= "/", "don't pass paths starting at root")
 	local commands = { ("cd %s"):format(dir) }
-	for _, path in ipairs(dirPaths) do
-		table.insert(commands, RMDIR_CMD:format(path))
+	for _, dirPath in ipairs(dirPaths) do
+		assert(dirPath:sub(1, 1) ~= "/", "don't pass paths starting at root")
+		table.insert(commands, RMDIR_CMD:format(dirPath))
 	end
-	for _, path in ipairs(filePaths) do
-		table.insert(commands, RM_CMD:format(path))
+	for _, filePath in ipairs(filePaths) do
+		assert(filePath:sub(1, 1) ~= "/", "don't pass paths starting at root")
+		table.insert(commands, RM_CMD:format(filePath))
 	end
 	table.insert(commands, "cd ..")
 
