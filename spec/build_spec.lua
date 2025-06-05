@@ -41,8 +41,8 @@ end
 local function makeProject(dir)
 	return os.execute(table.concat({
 		("cd %s"):format(dir),
-		"luarocks init --no-wrapper-scripts --no-gitignore",
-		"luarocks make",
+		"luarocks init --no-wrapper-scripts --no-gitignore > NUL",
+		"luarocks make > NUL 2>&1",
 		"cd ..",
 	}, " && "))
 end
