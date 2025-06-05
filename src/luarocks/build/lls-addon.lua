@@ -78,6 +78,28 @@ local function writeLuarc(luarc, luarcPath)
 	assertContext("when writing to .luarc.json", file:write(contents))
 end
 
+---@return string[] luarcPaths
+local function readLuarcPaths()
+	local LUARC_PATH = os.getenv("LLSADDON_LUARCPATH")
+	if LUARC_PATH then
+		local luarcPaths = {}
+		local sep = string.sub(package.config, 3, 3)
+		for luarcPath in string.gmatch(LUARC_PATH, "[^%" .. sep .. "]+") do
+			table.insert(luarcPaths, luarcPath)
+		end
+		return luarcPaths
+	else
+		local projectDir = cfg.project_dir --[[@as string]]
+		if not projectDir then
+			print("project directory not found, defaulting to working directory")
+			assertContext("when changing to working directory", fs.change_dir("."))
+			projectDir = fs.current_dir()
+			assert(fs.pop_dir(), "unable to find source directory")
+		end
+		return { dir.path(projectDir, ".luarc.json") }
+	end
+end
+
 ---merges ('config.json').settings into .luarc.json
 ---@param source string
 ---@param luarc table
@@ -107,20 +129,6 @@ local function copyConfigSettings(source, luarc)
 	return extend(luarc, settingsNoPrefix)
 end
 
----pushes the library/ path to the 'workspace.library' array
----@param destination string
----@param luarc { [string]: any }
-local function insertLibrary(destination, luarc)
-	print("Adding " .. destination .. " to 'workspace.library' of .luarc.json")
-	local library = luarc["workspace.library"]
-	if not isJsonArray(library) then
-		luarc["workspace.library"] = setmetatable({ destination }, arrayMt)
-	elseif not contains(library, destination) then
-		table.insert(library, destination)
-		table.sort(library)
-	end
-end
-
 ---@param source string
 ---@param destination string
 local function copyFile(source, destination)
@@ -144,21 +152,14 @@ end
 ---  references to the above copied files
 ---@param rockspec luarocks.rockspec
 local function addFiles(rockspec)
-	local projectDir = cfg.project_dir --[[@as string]]
-	if not projectDir then
-		print("project directory not found, defaulting to working directory")
-		assertContext("when changing to working directory", fs.change_dir("."))
-		projectDir = fs.current_dir()
-		assert(fs.pop_dir(), "unable to find source directory")
-	end
+	-- a list of paths separated by `package.config:sub(3, 3)`
+	local luarcPaths = readLuarcPaths()
 
 	local name = rockspec.package
 	local version = rockspec.version
 	print("Building addon " .. name .. " @ " .. version)
 
 	local installDirectory = path.install_dir(name, version)
-
-	local luarcPath = dir.path(projectDir, ".luarc.json")
 
 	local luarc ---@type { [string]: any }
 
@@ -168,8 +169,9 @@ local function addFiles(rockspec)
 		copyDirectory(librarySource, libraryDestination)
 
 		-- also insert the library/ directory into 'workspace.library'
-		luarc = luarc or readLuarc(luarcPath)
-		insertLibrary(libraryDestination, luarc)
+		luarc = luarc or setmetatable({}, objectMt)
+		print("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
+		luarc["workspace.library"] = setmetatable({ libraryDestination }, arrayMt)
 	end
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
@@ -178,7 +180,8 @@ local function addFiles(rockspec)
 		copyFile(pluginSource, pluginDestination)
 
 		-- also set 'runtime.plugin' in .luarc.json
-		luarc = luarc or readLuarc(luarcPath)
+		luarc = luarc or setmetatable({}, objectMt)
+		print("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
 		luarc["runtime.plugin"] = pluginDestination
 	end
 
@@ -187,12 +190,16 @@ local function addFiles(rockspec)
 		copyFile(configSource, dir.path(installDirectory, "config.json"))
 
 		-- also merge 'settings' from 'config.json' into .luarc.json
-		luarc = luarc or readLuarc(luarcPath)
+		luarc = luarc or setmetatable({}, objectMt)
 		luarc = copyConfigSettings(configSource, luarc)
 	end
 
 	if luarc then
-		writeLuarc(luarc, luarcPath)
+		for _, luarcPath in ipairs(luarcPaths) do
+			local oldLuarc = readLuarc(luarcPath)
+			extend(oldLuarc, luarc)
+			writeLuarc(oldLuarc, luarcPath)
+		end
 	end
 end
 
