@@ -6,7 +6,7 @@ assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 local SEP = package.config:sub(1, 1)
 local RMDIR_CMD = SEP == "\\" and "rmdir /S /Q %s" or "rm -rf %s"
 local RM_CMD = SEP == "\\" and "del %s" or "rm %s"
-
+local NULL = SEP == "\\" and "NUL" or "/dev/null"
 
 ---@param ... string
 ---@return string
@@ -49,8 +49,8 @@ local function makeProject(dir)
 	assert(dir:sub(1, 1) ~= "/", "don't pass paths starting at root")
 	return os.execute(table.concat({
 		("cd %s"):format(dir),
-		"luarocks init --no-wrapper-scripts --no-gitignore > NUL",
-		"luarocks make > NUL 2>&1",
+		("luarocks init --no-wrapper-scripts --no-gitignore > %s"):format(NULL),
+		("luarocks make > %s 2>&1"):format(NULL),
 		"cd ..",
 	}, " && "))
 end
