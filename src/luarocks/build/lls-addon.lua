@@ -4,10 +4,16 @@ local path = require("luarocks.path")
 local cfg = require("luarocks.core.cfg")
 local json = require("luarocks.vendor.dkjson")
 
+local jsonCmp = require("luarocks.build.lls-addon.json-cmp")
+local extend = require("luarocks.build.lls-addon.extend")
+local contains = require("luarocks.build.lls-addon.contains")
+
 local M = {}
 
-local arrayMt = { __jsontype = "array" }
-local objectMt = { __jsontype = "object" }
+local arrayMt = jsonCmp.arrayMt
+local objectMt = jsonCmp.objectMt
+local isJsonArray = jsonCmp.isJsonArray
+local isJsonObject = jsonCmp.isJsonObject
 
 local function assertContext(context, ...)
 	local s, msg = ...
@@ -15,72 +21,6 @@ local function assertContext(context, ...)
 		error(context .. ": " .. msg)
 	end
 	return ...
-end
-
----@param value any
----@return boolean
-local function isJsonObject(value)
-	return type(value) == "table" and getmetatable(value) == objectMt
-end
-
----@param value any
----@return boolean
-local function isJsonArray(value)
-	return type(value) == "table" and getmetatable(value) == arrayMt
-end
-
----checks if all fields of `a` is equal to all fields of `b`. Only the keys of
----`a` are iterated through.
----@param a any
----@param b any
-local function deepEqual(a, b)
-	if type(a) == "table" and type(b) == "table" then
-		for k, v in pairs(a) do
-			if not deepEqual(v, b[k]) then
-				return false
-			end
-		end
-		return true
-	else
-		return a == b
-	end
-end
-
----checks if there is any element in `array` that is deeply equal to `value`
----@param array any[]
----@param value any
----@return boolean
-local function contains(array, value)
-	for _, v in ipairs(array) do
-		if deepEqual(v, value) then
-			return true
-		end
-	end
-	return false
-end
-
----modifies `old` such that it contains all the properties of `new`. Arrays are
----treated like sets, so any new values will only be inserted if the array
----doesn't contain it.
----@param old any
----@param new any
----@return any
-local function extend(old, new)
-	if isJsonArray(old) and isJsonArray(new) then -- treat arrays like sets
-		for _, v in ipairs(new) do
-			if not contains(old, v) then
-				table.insert(old, v)
-			end
-		end
-		return old
-	elseif isJsonObject(old) and isJsonObject(new) then
-		for k, v in pairs(new) do
-			old[k] = extend(old[k], v)
-		end
-		return old
-	else
-		return new
-	end
 end
 
 ---@param sourcePath string
@@ -143,13 +83,13 @@ end
 ---@param luarc table
 ---@return table luarc
 local function copyConfigSettings(source, luarc)
-	-- also decode it and copy the settings into .luarc.json
-	local config = readJsonFile(source) --[[@as { [string]: any }]]
+	local config = readJsonFile(source)
 
 	if not isJsonObject(config) then
 		print("Root of 'config.json' is not an object, skipping")
 		return luarc
 	end
+	---@cast config { [string]: any }
 
 	local settings = config.settings
 	if not isJsonObject(settings) then
@@ -257,7 +197,7 @@ local function addFiles(rockspec)
 end
 
 ---@param rockspec luarocks.rockspec
----@return boolean?, string?
+---@return boolean, string?
 function M.run(rockspec)
 	assert(rockspec:type() == "rockspec", "argument is not a rockspec")
 
