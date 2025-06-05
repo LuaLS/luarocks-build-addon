@@ -15,7 +15,13 @@ local function path(...)
 	return table.concat({ ... }, SEP)
 end
 
-lfs.chdir(path("spec", "projects"))
+setup(function()
+	lfs.chdir(path("spec", "projects"))
+end)
+
+teardown(function ()
+	lfs.chdir(path("..", ".."))
+end)
 
 ---@param path string
 ---@return boolean
