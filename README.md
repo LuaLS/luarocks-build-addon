@@ -36,6 +36,11 @@ Now you should have types! This step obviously still needs a lot of work to auto
 
 You can try adding plugins or other settings to see if everything is working as intended.
 
+## Testing
+
+1. Set the contents of `.luarocks/default-lua-version.lua` to `return 5.4`. The build fails otherwise, I don't know why.
+2. Run `luarocks test`.
+
 ---
 
 It isn't ideal, but it is using nothing but LuaRocks 🤷. I would love a `dev_dependencies` field in `.rockspec` files to allow the addon to be installed for dev work but not build/prod. Open to any suggestions on how to improve this, including not hacking around LuaRocks and just creating a separate CLI tool 😄
