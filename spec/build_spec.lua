@@ -8,13 +8,14 @@ local SEP = package.config:sub(1, 1)
 local RMDIR_CMD = SEP == "\\" and "rmdir /S /Q %s" or "rm -rf %s"
 local RM_CMD = SEP == "\\" and "del %s" or "rm %s"
 
-lfs.chdir("spec")
 
 ---@param ... string
 ---@return string
 local function path(...)
 	return table.concat({ ... }, SEP)
 end
+
+lfs.chdir(path("spec", "projects"))
 
 ---@param path string
 ---@return boolean
