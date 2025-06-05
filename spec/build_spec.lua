@@ -86,6 +86,17 @@ it("works when there is a library included", function()
 	}, luarc["workspace.library"])
 end)
 
+it("works when there is a config included", function()
+    local dir = "with-config"
+    assert.is_true(makeProject(dir))
+    finally(function()
+		cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
+	end)
+    assert.is_true(fileExists(installDir(dir, "config.json")))
+    local luarc = readJson(path(dir, ".luarc.json"))
+    assert.is_true(luarc["example"])
+end)
+
 it("works when there is a plugin included", function()
 	local dir = "with-plugin"
 	assert.is_true(makeProject(dir))
@@ -97,15 +108,19 @@ it("works when there is a plugin included", function()
 	assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
 end)
 
-it("works when there is a config included", function()
-    local dir = "with-config"
-    assert.is_true(makeProject(dir))
-    finally(function()
+it("works when there is a library and config included", function()
+	local dir = "with-lib-config"
+	assert.is_true(makeProject(dir))
+	finally(function()
 		cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
 	end)
-    assert.is_true(fileExists(installDir(dir, "config.json")))
-    local luarc = readJson(path(dir, ".luarc.json"))
-    assert.is_true(luarc["example"])
+	assert.is_true(fileExists(installDir(dir, "library")))
+	assert.is_true(fileExists(installDir(dir, "config.json")))
+	local luarc = readJson(path(dir, ".luarc.json"))
+	assert.are_same({
+		path(lfs.currentdir(), installDir(dir, "library")),
+	}, luarc["workspace.library"])
+	assert.is_true(luarc["example"])
 end)
 
 it("works when there is a library and plugin included", function()
@@ -120,5 +135,35 @@ it("works when there is a library and plugin included", function()
 	assert.are_same({
 		path(lfs.currentdir(), installDir(dir, "library")),
 	}, luarc["workspace.library"])
+	assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
+end)
+
+it("works when there is a config and plugin included", function()
+	local dir = "with-config-plugin"
+	assert.is_true(makeProject(dir))
+	finally(function()
+		cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
+	end)
+	assert.is_true(fileExists(installDir(dir, "config.json")))
+	assert.is_true(fileExists(installDir(dir, "plugin.lua")))
+	local luarc = readJson(path(dir, ".luarc.json"))
+	assert.is_true(luarc["example"])
+	assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
+end)
+
+it("works when there is a library, config, and plugin included", function()
+	local dir = "with-lib-config-plugin"
+	assert.is_true(makeProject(dir))
+	finally(function()
+		cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
+	end)
+	assert.is_true(fileExists(installDir(dir, "library")))
+	assert.is_true(fileExists(installDir(dir, "config.json")))
+	assert.is_true(fileExists(installDir(dir, "plugin.lua")))
+	local luarc = readJson(path(dir, ".luarc.json"))
+	assert.are_same({
+		path(lfs.currentdir(), installDir(dir, "library")),
+	}, luarc["workspace.library"])
+	assert.is_true(luarc["example"])
 	assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
 end)
