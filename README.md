@@ -1,5 +1,9 @@
 # Experimental LuaRocks Build Backend for LuaLS Addons
 
+## Supported environment variables
+
+- `LLSADDON_LUARCPATH="$path1;$path2;..."`: a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
+
 ## Building
 
 1. Start by cloning this repo.
