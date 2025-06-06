@@ -2,6 +2,9 @@
 
 ## Supported environment variables
 
+> [!NOTE]
+> The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system. If path-list variables are included in a rockspec, split the declarations by platform.
+
 - `LLSADDON_LUARCPATH="$path1;$path2;..."`: a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
 
 ## Building
