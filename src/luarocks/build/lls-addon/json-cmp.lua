@@ -5,6 +5,18 @@ local objectMt = { __jsontype = "object" }
 M.arrayMt = arrayMt
 M.objectMt = objectMt
 
+---@param t any[]
+---@return any[]
+function M.array(t)
+	return setmetatable(t, arrayMt)
+end
+
+---@param t { [string]: any }
+---@return { [string]: any }
+function M.object(t)
+	return setmetatable(t, objectMt)
+end
+
 ---@param value any
 ---@return boolean
 function M.isJsonObject(value)

@@ -1,15 +1,8 @@
 local extend = require("luarocks.build.lls-addon.extend")
 local jsonCmp = require("luarocks.build.lls-addon.json-cmp")
 
-local arrayMt = jsonCmp.arrayMt
-local function array(t)
-	return setmetatable(t, arrayMt)
-end
-
-local objectMt = jsonCmp.objectMt
-local function object(t)
-    return setmetatable(t, objectMt)
-end
+local array = jsonCmp.array
+local object = jsonCmp.object
 
 describe("array", function ()
     it("gets replaced if it doesn't have an arrayMt", function()
@@ -57,5 +50,26 @@ describe("object", function ()
         local new = object({ key = "new", a = 1, b = 2, c = 3 })
         obj = extend(obj, new)
         assert.are_same({ key = "new", a = 1, b = 2, c = 3 }, obj)
+    end)
+
+    it("fills nested keys when given unnested keys", function ()
+        local obj = object({ some = object({}) })
+        local new = object({ ["some.key"] = "new value" })
+        obj = extend(obj, new)
+        assert.are_same({ some = { key = "new value" } }, obj)
+    end)
+
+    it("writes nested keys from unnested keys", function()
+        local obj = object({ other = object({ key = "value" }) })
+        local new = object({ ["other.key"] = "new value" })
+        obj = extend(obj, new)
+        assert.are_same({ other = { key = "new value" } }, obj)
+    end)
+
+    it("cannot write from nested keys correctly", function()
+        local obj = object({ ["some.key"] = "value" })
+        local new = object({ some = object({ key = "new value" }) })
+        obj = extend(obj, new)
+        assert.are_same({ ["some.key"] = "value", some = { key = "new value" } }, obj)
     end)
 end)

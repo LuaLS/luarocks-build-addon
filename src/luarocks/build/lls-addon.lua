@@ -10,6 +10,8 @@ local contains = require("luarocks.build.lls-addon.contains")
 
 local M = {}
 
+local array = jsonCmp.array
+local object = jsonCmp.object
 local arrayMt = jsonCmp.arrayMt
 local objectMt = jsonCmp.objectMt
 local isJsonArray = jsonCmp.isJsonArray
@@ -44,7 +46,7 @@ local function readLuarc(luarcPath)
 		end
 	else
 		print(luarcPath .. " not found, generating...")
-		luarc = setmetatable({}, objectMt)
+		luarc = object({})
 	end
 
 	return luarc
@@ -121,7 +123,7 @@ local function copyConfigSettings(source, luarc)
 	---@cast settings { [string]: any }
 
 	print("Merging 'settings' object into .luarc.json")
-	local settingsNoPrefix = setmetatable({}, objectMt) ---@type { [string]: any }
+	local settingsNoPrefix = object({})
 	for k, v in pairs(settings) do
 		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
 	end
@@ -169,9 +171,9 @@ local function addFiles(rockspec)
 		copyDirectory(librarySource, libraryDestination)
 
 		-- also insert the library/ directory into 'workspace.library'
-		luarc = luarc or setmetatable({}, objectMt)
+		luarc = luarc or object({})
 		print("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
-		luarc["workspace.library"] = setmetatable({ libraryDestination }, arrayMt)
+		luarc["workspace.library"] = array({ libraryDestination })
 	end
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
@@ -180,7 +182,7 @@ local function addFiles(rockspec)
 		copyFile(pluginSource, pluginDestination)
 
 		-- also set 'runtime.plugin' in .luarc.json
-		luarc = luarc or setmetatable({}, objectMt)
+		luarc = luarc or object({})
 		print("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
 		luarc["runtime.plugin"] = pluginDestination
 	end
@@ -190,7 +192,7 @@ local function addFiles(rockspec)
 		copyFile(configSource, dir.path(installDirectory, "config.json"))
 
 		-- also merge 'settings' from 'config.json' into .luarc.json
-		luarc = luarc or setmetatable({}, objectMt)
+		luarc = luarc or object({})
 		luarc = copyConfigSettings(configSource, luarc)
 	end
 
