@@ -4,19 +4,16 @@ local path = require("luarocks.path")
 local cfg = require("luarocks.core.cfg")
 local json = require("luarocks.vendor.dkjson")
 
-local jsonCmp = require("luarocks.build.lls-addon.json-cmp")
+local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
 local extend = require("luarocks.build.lls-addon.extend")
-local contains = require("luarocks.build.lls-addon.contains")
 
 local M = {}
 
-local array = jsonCmp.array
-local object = jsonCmp.object
-local arrayMt = jsonCmp.arrayMt
-local objectMt = jsonCmp.objectMt
-local isJsonArray = jsonCmp.isJsonArray
-local isJsonObject = jsonCmp.isJsonObject
-local readJsonFile = jsonCmp.readJsonFile
+local array = jsonUtil.array
+local object = jsonUtil.object
+local isJsonArray = jsonUtil.isJsonArray
+local isJsonObject = jsonUtil.isJsonObject
+local readJsonFile = jsonUtil.readJsonFile
 
 local function assertContext(context, ...)
 	local s, msg = ...

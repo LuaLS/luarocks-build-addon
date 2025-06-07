@@ -1,8 +1,9 @@
+_G._TEST = true
 local extend = require("luarocks.build.lls-addon.extend")
-local jsonCmp = require("luarocks.build.lls-addon.json-cmp")
+local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
 
-local array = jsonCmp.array
-local object = jsonCmp.object
+local array = jsonUtil.array
+local object = jsonUtil.object
 
 describe("array", function ()
     it("gets replaced if it doesn't have an arrayMt", function()

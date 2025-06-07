@@ -14,5 +14,5 @@ test_dependencies = {
    "busted ~> 2.2",
    "luafilesystem ~> 1.8",
    "inspect ~> 3.1",
-   "lua-cjson ~> 2.1.0"
+   "dkjson ~> 2.8"
 }

@@ -1,5 +1,7 @@
+_G._TEST = true
 local lfs = require("lfs")
-local json = require("cjson")
+
+local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
 
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
@@ -20,14 +22,7 @@ local function fileExists(path)
 	return lfs.attributes(path) ~= nil
 end
 
----@param path string
----@return any
-local function readJson(path)
-	local file = assert(io.open(path))
-	local contents = file:read("a")
-	file:close()
-	return json.decode(contents)
-end
+local readJsonFile = jsonUtil.readJsonFile
 
 ---@param dir string
 ---@param ... string
@@ -92,7 +87,7 @@ describe("#slow behavior", function ()
 			cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
 		end)
 		assert.is_true(fileExists(installDir(dir, "library")))
-		local luarc = readJson(path(dir, ".luarc.json"))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.are_same({
 			path(lfs.currentdir(), installDir(dir, "library")),
 		}, luarc["workspace.library"])
@@ -105,7 +100,7 @@ describe("#slow behavior", function ()
 			cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
 		end)
 		assert.is_true(fileExists(installDir(dir, "config.json")))
-		local luarc = readJson(path(dir, ".luarc.json"))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.is_true(luarc["example"])
 	end)
 
@@ -116,7 +111,7 @@ describe("#slow behavior", function ()
 			cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
 		end)
 		assert.is_true(fileExists(installDir(dir, "plugin.lua")))
-		local luarc = readJson(path(dir, ".luarc.json"))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
 	end)
 
@@ -128,7 +123,7 @@ describe("#slow behavior", function ()
 		end)
 		assert.is_true(fileExists(installDir(dir, "library")))
 		assert.is_true(fileExists(installDir(dir, "config.json")))
-		local luarc = readJson(path(dir, ".luarc.json"))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.are_same({
 			path(lfs.currentdir(), installDir(dir, "library")),
 		}, luarc["workspace.library"])
@@ -143,7 +138,7 @@ describe("#slow behavior", function ()
 		end)
 		assert.is_true(fileExists(installDir(dir, "library")))
 		assert.is_true(fileExists(installDir(dir, "plugin.lua")))
-		local luarc = readJson(path(dir, ".luarc.json"))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.are_same({
 			path(lfs.currentdir(), installDir(dir, "library")),
 		}, luarc["workspace.library"])
@@ -158,7 +153,7 @@ describe("#slow behavior", function ()
 		end)
 		assert.is_true(fileExists(installDir(dir, "config.json")))
 		assert.is_true(fileExists(installDir(dir, "plugin.lua")))
-		local luarc = readJson(path(dir, ".luarc.json"))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.is_true(luarc["example"])
 		assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
 	end)
@@ -172,7 +167,7 @@ describe("#slow behavior", function ()
 		assert.is_true(fileExists(installDir(dir, "library")))
 		assert.is_true(fileExists(installDir(dir, "config.json")))
 		assert.is_true(fileExists(installDir(dir, "plugin.lua")))
-		local luarc = readJson(path(dir, ".luarc.json"))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.are_same({
 			path(lfs.currentdir(), installDir(dir, "library")),
 		}, luarc["workspace.library"])

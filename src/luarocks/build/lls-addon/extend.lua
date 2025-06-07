@@ -1,9 +1,9 @@
-local jsonCmp = require("luarocks.build.lls-addon.json-cmp")
+local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
 local contains = require("luarocks.build.lls-addon.contains")
 
-local object = jsonCmp.object
-local isJsonArray = jsonCmp.isJsonArray
-local isJsonObject = jsonCmp.isJsonObject
+local object = jsonUtil.object
+local isJsonArray = jsonUtil.isJsonArray
+local isJsonObject = jsonUtil.isJsonObject
 
 ---modifies `old` such that it contains all the properties of `new`. Arrays are
 ---treated like sets, so any new values will only be inserted if the array
