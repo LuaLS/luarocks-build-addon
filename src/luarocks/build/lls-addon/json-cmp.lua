@@ -1,4 +1,14 @@
+local json = require("luarocks.vendor.dkjson")
+
 local M = {}
+
+local function assertContext(context, ...)
+	local s, msg = ...
+	if not s then
+		error(context .. ": " .. msg)
+	end
+	return ...
+end
 
 local arrayMt = { __jsontype = "array" }
 local objectMt = { __jsontype = "object" }
@@ -27,6 +37,14 @@ end
 ---@return boolean
 function M.isJsonArray(value)
 	return type(value) == "table" and getmetatable(value) == arrayMt
+end
+
+---@param sourcePath string
+---@return any
+function M.readJsonFile(sourcePath)
+	local file <close> = assertContext("when opening " .. sourcePath, io.open(sourcePath))
+	local contents = file:read("a")
+	return json.decode(contents, nil, json.null, objectMt, arrayMt)
 end
 
 return M

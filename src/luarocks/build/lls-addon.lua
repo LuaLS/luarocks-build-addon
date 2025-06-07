@@ -16,6 +16,7 @@ local arrayMt = jsonCmp.arrayMt
 local objectMt = jsonCmp.objectMt
 local isJsonArray = jsonCmp.isJsonArray
 local isJsonObject = jsonCmp.isJsonObject
+local readJsonFile = jsonCmp.readJsonFile
 
 local function assertContext(context, ...)
 	local s, msg = ...
@@ -23,14 +24,6 @@ local function assertContext(context, ...)
 		error(context .. ": " .. msg)
 	end
 	return ...
-end
-
----@param sourcePath string
----@return any
-local function readJsonFile(sourcePath)
-	local file <close> = assertContext("when opening " .. sourcePath, io.open(sourcePath))
-	local contents = file:read("a")
-	return json.decode(contents, nil, json.null, objectMt, arrayMt)
 end
 
 ---reads .luarc.json into a table, or returns a new one if it doesn't exist
