@@ -1,6 +1,6 @@
 _G._TEST = true
 local extend = require("luarocks.build.lls-addon.extend")
-local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
+local jsonUtil = require("luarocks.build.lls-addon.json-util")
 
 local array = jsonUtil.array
 local object = jsonUtil.object

@@ -1,7 +1,7 @@
 _G._TEST = true
 local lfs = require("lfs")
 
-local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
+local jsonUtil = require("luarocks.build.lls-addon.json-util")
 
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 

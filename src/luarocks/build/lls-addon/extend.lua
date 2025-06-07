@@ -1,4 +1,4 @@
-local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
+local jsonUtil = require("luarocks.build.lls-addon.json-util")
 local contains = require("luarocks.build.lls-addon.contains")
 
 local object = jsonUtil.object

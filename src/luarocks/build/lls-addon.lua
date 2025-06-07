@@ -4,7 +4,7 @@ local path = require("luarocks.path")
 local cfg = require("luarocks.core.cfg")
 local json = require("luarocks.vendor.dkjson")
 
-local jsonUtil = require("src.luarocks.build.lls-addon.json-util")
+local jsonUtil = require("luarocks.build.lls-addon.json-util")
 local extend = require("luarocks.build.lls-addon.extend")
 
 local M = {}

@@ -3,10 +3,15 @@
         "$USERPROFILE/Documents/References/luarocks/src",
         "${addons}/luafilesystem/module/library",
         "${addons}/busted/module/library",
-        "${3rd}/luassert/library",
-        "lua_modules/share/lua/5.4"
+        "${3rd}/luassert/library"
     ],
     "runtime.version": "Lua 5.4",
+    "runtime.path": [
+        "src/?.lua",
+        "src/?/init.lua",
+        "lua_modules/share/lua/5.4/?.lua",
+        "lua_modules/share/lua/5.4/?/init.lua"
+    ],
     "diagnostics.globals": [
         "lfs"
     ],
