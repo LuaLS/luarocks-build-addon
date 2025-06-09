@@ -2,6 +2,7 @@
 ---@cast assert luassert
 
 _G._TEST = true
+
 local tableUtil = require("luarocks.build.lls-addon.table-util")
 local extend = tableUtil.extend
 local unnest2 = tableUtil.unnest2
@@ -80,10 +81,27 @@ describe("object", function()
 	end)
 
 	it("writes unnested keys from nested keys that were unnested", function()
-        local obj = object({ ["some.key"] = "value" })
+		local obj = object({ ["some.key"] = "value" })
 		local new = object({ some = object({ key = "new value" }) })
-        local unnested = unnest2(new)
+		local unnested = unnest2(new)
 		obj = extend(obj, unnested)
 		assert.are_same({ ["some.key"] = "new value" }, obj)
-    end)
+	end)
+
+	it("#only writes both nested and unnested keys", function()
+		local obj = object({
+			completion = object({ autoRequire = "value 1" }),
+			["hover.enable"] = "value 2",
+		})
+		local new = object({
+			["completion.autoRequire"] = "new value 1",
+			hover = object({ enable = "new value 2" }),
+		})
+		local unnested = unnest2(new)
+		obj = extend(obj, unnested)
+		assert.are_same({
+			completion = { autoRequire = "new value 1" },
+			["hover.enable"] = "new value 2",
+		}, obj)
+	end)
 end)

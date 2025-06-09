@@ -135,7 +135,7 @@ M.unnestKey = unnestKey
 ---@param t { [string]: any }
 ---@return { [string]: any } unnested
 local function unnest2(t)
-	local unnested = {} ---@type { [string]: any }
+	local unnested = object({}) ---@type { [string]: any }
 	local keys = {}
 	for k in pairs(t) do
 		table.insert(keys, k)
