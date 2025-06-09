@@ -66,11 +66,24 @@ local function extend(old, new)
 		---@cast new { [string]: any }
 		for k, v in pairs(new) do
 			-- if `old` has `firstKey`, merge settings in a nested way
-			local firstKey, rest = string.match(k, "^(.-)%.(.*)$")
-			local oldFirstValue = old[firstKey] -- this is nil if firstKey is nil
-			if oldFirstValue ~= nil then
-				old[firstKey] = extend(oldFirstValue, object({ [rest] = v }))
-			else -- otherwise, merge them in an unnested way
+			local path = {} ---@type string[]
+			for subKey in string.gmatch(k, "[^%.]+") do
+				table.insert(path, subKey)
+			end
+			local keyFound = false
+			for i = 1, #path - 1 do
+				local firstKey = table.concat(path, ".", 1, i)
+				local rest = table.concat(path, ".", i + 1, #path)
+				local oldFirstValue = old[firstKey]
+				if oldFirstValue ~= nil then
+					old[firstKey] = extend(oldFirstValue, object({ [rest] = v }))
+					keyFound = true
+					break
+				end
+			end
+
+			if not keyFound then
+				-- otherwise, merge them in an unnested way
 				old[k] = extend(old[k], v)
 			end
 		end
