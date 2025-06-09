@@ -6,6 +6,8 @@
 > The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system. If path-list variables are included in a rockspec, split the declarations by platform.
 
 - `LLSADDON_LUARCPATH="$path1;$path2;..."`: a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
+- `LLSADDON_VSCSETTINGSPATH="$path1;$path2;..."`: a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon.
+   - If at least one of the above variables is set to `""` and the other is unset, no config files will be modified by the build process.
 
 ## Building
 
