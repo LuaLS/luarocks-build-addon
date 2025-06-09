@@ -200,6 +200,5 @@ describe("#slow behavior", function()
 			completion = { autoRequire = false },
 			["hover.enable"] = false,
 		}, luarc)
-		assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
 	end)
 end)

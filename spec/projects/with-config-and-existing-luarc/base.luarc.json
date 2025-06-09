@@ -1,5 +1,4 @@
 {
-    "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/refs/tags/v3.14.0/setting/schema.json",
     "completion": {
         "autoRequire": true
     },

@@ -88,7 +88,7 @@ describe("object", function()
 		assert.are_same({ ["some.key"] = "new value" }, obj)
 	end)
 
-	it("#only writes both nested and unnested keys", function()
+	it("writes both nested and unnested keys", function()
 		local obj = object({
 			completion = object({ autoRequire = "value 1" }),
 			["hover.enable"] = "value 2",
