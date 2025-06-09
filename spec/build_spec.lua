@@ -26,12 +26,21 @@ local function fileExists(path)
 	return lfs.attributes(path) ~= nil
 end
 
-
 ---@param dir string
 ---@param ... string
 ---@return string
 local function installDir(dir, ...)
 	return path(dir, "lua_modules", "lib", "luarocks", "rocks-5.4", dir, "0.1-1", ...)
+end
+
+---@param dir string
+local function copyLuarc(dir)
+	local baseLuarc = assert(io.open(path(dir, "base.luarc.json"), "r")) --[[@as file*]]
+	local contents = baseLuarc:read("a")
+	baseLuarc:close()
+	local luarc = assert(io.open(path(dir, ".luarc.json"), "w")) --[[@as file*]]
+	luarc:write(contents)
+	luarc:close()
 end
 
 ---@param dir string
@@ -64,12 +73,12 @@ local function cleanProject(dir, dirPaths, filePaths)
 	return os.execute(table.concat(commands, " && "))
 end
 
-describe("#slow behavior", function ()
+describe("#slow behavior", function()
 	setup(function()
 		lfs.chdir(path("spec", "projects"))
 	end)
 
-	teardown(function ()
+	teardown(function()
 		lfs.chdir(path("..", ".."))
 	end)
 
@@ -175,6 +184,22 @@ describe("#slow behavior", function ()
 			path(lfs.currentdir(), installDir(dir, "library")),
 		}, luarc["workspace.library"])
 		assert.is_true(luarc["example"])
+		assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
+	end)
+
+	it("overwrites existing .luarc.json", function()
+		local dir = "with-config-and-existing-luarc"
+		copyLuarc(dir)
+		assert.is_true(makeProject(dir))
+		finally(function()
+			cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
+		end)
+		assert.is_true(fileExists(installDir(dir, "config.json")))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
+		assert.are_same({
+			completion = { autoRequire = false },
+			["hover.enable"] = false,
+		}, luarc)
 		assert.are_equal(path(lfs.currentdir(), installDir(dir, "plugin.lua")), luarc["runtime.plugin"])
 	end)
 end)
