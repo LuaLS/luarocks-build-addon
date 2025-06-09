@@ -1,0 +1,4 @@
+{
+  "Lua.completion.autoRequire": true,
+  "Lua.hover.enable": true
+}

@@ -10,9 +10,9 @@ local readJsonFile = jsonUtil.readJsonFile
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
 local SEP = package.config:sub(1, 1)
-local RMDIR_CMD = SEP == "\\" and "rmdir /S /Q %s" or "rm -rf %s"
-local RM_CMD = SEP == "\\" and "del %s" or "rm %s"
 local NULL = SEP == "\\" and "NUL" or "/dev/null"
+local RMDIR_CMD = SEP == "\\" and "rmdir /S /Q %s" or "rm -rf %s"
+local RM_CMD = SEP == "\\" and string.format("del %%s 2> %s", NULL) or "rm -f %s"
 
 ---@param ... string
 ---@return string
@@ -41,6 +41,16 @@ local function copyLuarc(dir)
 	local luarc = assert(io.open(path(dir, ".luarc.json"), "w")) --[[@as file*]]
 	luarc:write(contents)
 	luarc:close()
+end
+
+---@param dir string
+local function copySettings(dir)
+	local baseSettings = assert(io.open(path(dir, ".vscode", "base.settings.json"), "r")) --[[@as file*]]
+	local contents = baseSettings:read("a")
+	baseSettings:close()
+	local settings = assert(io.open(path(dir, ".vscode", "settings.json"), "w")) --[[@as file*]]
+	settings:write(contents)
+	settings:close()
 end
 
 ---@param dir string
@@ -200,5 +210,40 @@ describe("#slow behavior", function()
 			completion = { autoRequire = false },
 			["hover.enable"] = false,
 		}, luarc)
+	end)
+	it("overwrites existing .vscode/settings.json", function()
+		local dir = "with-config-and-existing-vsc-settings"
+		copySettings(dir)
+		assert.is_true(makeProject(dir))
+		finally(function()
+			cleanProject(dir, { ".luarocks", "lua_modules" }, { path(".vscode", "settings.json"), ".luarc.json" })
+		end)
+		assert.is_true(fileExists(installDir(dir, "config.json")))
+		assert.is_false(fileExists(path(dir, ".luarc.json")))
+		local settings = readJsonFile(path(dir, ".vscode", "settings.json"))
+		assert.are_same({
+			["Lua.completion.autoRequire"] = false,
+			["Lua.hover.enable"] = false,
+		}, settings)
+	end)
+	it("overwrites .luarc.json and not .vscode/settings.json when former exists", function()
+		local dir = "with-config-and-existing-luarc-and-vsc-settings"
+		copyLuarc(dir)
+		copySettings(dir)
+		assert.is_true(makeProject(dir))
+		finally(function()
+			cleanProject(dir, { ".luarocks", "lua_modules" }, { path(".vscode", "settings.json"), ".luarc.json" })
+		end)
+		assert.is_true(fileExists(installDir(dir, "config.json")))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
+		assert.are_same({
+			completion = { autoRequire = false },
+			["hover.enable"] = false,
+		}, luarc)
+		local settings = readJsonFile(path(dir, ".vscode", "settings.json"))
+		assert.are_same({
+			["Lua.completion.autoRequire"] = true,
+			["Lua.hover.enable"] = true,
+		}, settings)
 	end)
 end)

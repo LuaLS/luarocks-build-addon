@@ -17,7 +17,6 @@ local unnest2 = tableUtil.unnest2
 
 local M = {}
 
-
 local function assertContext(context, ...)
 	local s, msg = ...
 	if not s then
@@ -38,7 +37,7 @@ local function readLuarc(luarcPath)
 			error("[BuildError]: Expected root of '.luarc.json' to be an object")
 		end
 	else
-		print(luarcPath .. " not found, generating...")
+		print(luarcPath .. " not found, generating a new one")
 		luarc = object({})
 	end
 
@@ -73,26 +72,47 @@ local function writeLuarc(luarc, luarcPath)
 	assertContext("when writing to .luarc.json", file:write(contents))
 end
 
----@return string[] luarcPaths
-local function readLuarcPaths()
-	local LUARC_PATH = os.getenv("LLSADDON_LUARCPATH")
-	if LUARC_PATH then
-		local luarcPaths = {}
-		local sep = string.sub(package.config, 3, 3)
-		for luarcPath in string.gmatch(LUARC_PATH, "[^%" .. sep .. "]+") do
-			table.insert(luarcPaths, luarcPath)
-		end
-		return luarcPaths
-	else
-		local projectDir = cfg.project_dir --[[@as string]]
-		if not projectDir then
-			print("project directory not found, defaulting to working directory")
-			assertContext("when changing to working directory", fs.change_dir("."))
-			projectDir = fs.current_dir()
-			assert(fs.pop_dir(), "unable to find source directory")
-		end
-		return { dir.path(projectDir, ".luarc.json") }
+---@return string
+local function getProjectDir()
+	local projectDir = cfg.project_dir --[[@as string]]
+	if not projectDir then
+		print("project directory not found, defaulting to working directory")
+		assertContext("when changing to working directory", fs.change_dir("."))
+		projectDir = fs.current_dir()
+		assert(fs.pop_dir(), "unable to find source directory")
 	end
+	return projectDir
+end
+
+---@param projectDir string
+---@return string
+local function getDefaultVscSettingsPath(projectDir)
+	return dir.path(projectDir, ".vscode", "settings.json")
+end
+
+---@param projectDir string
+---@return string
+local function getDefaultLuarcPath(projectDir)
+	return dir.path(projectDir, ".luarc.json")
+end
+
+local SEP = string.sub(package.config, 3, 3)
+local SEP_PATTERN = "[^%" .. SEP .. "]+"
+
+---@param envVariable string
+---@return string[]? paths
+local function readEnvPaths(envVariable)
+	print("looking for paths in " .. envVariable)
+	local PATH = os.getenv(envVariable)
+	if not PATH then
+		return nil
+	end
+
+	local paths = {}
+	for luarcPath in string.gmatch(PATH, SEP_PATTERN) do
+		table.insert(paths, luarcPath)
+	end
+	return paths
 end
 
 ---merges ('config.json').settings into .luarc.json
@@ -147,9 +167,6 @@ end
 ---  references to the above copied files
 ---@param rockspec luarocks.rockspec
 local function addFiles(rockspec)
-	-- a list of paths separated by `package.config:sub(3, 3)`
-	local luarcPaths = readLuarcPaths()
-
 	local name = rockspec.package
 	local version = rockspec.version
 	print("Building addon " .. name .. " @ " .. version)
@@ -190,10 +207,55 @@ local function addFiles(rockspec)
 	end
 
 	if luarc then
-		for _, luarcPath in ipairs(luarcPaths) do
-			local oldLuarc = readLuarc(luarcPath)
-			extend(oldLuarc, luarc)
-			writeLuarc(oldLuarc, luarcPath)
+		local luarcPaths = readEnvPaths("LLSADDON_LUARCPATH")
+		local vscPaths = readEnvPaths("LLSADDON_VSCSETTINGSPATH")
+
+		if luarcPaths then
+			for _, luarcPath in ipairs(luarcPaths) do
+				local oldLuarc = readLuarc(luarcPath)
+				extend(oldLuarc, luarc)
+				writeLuarc(oldLuarc, luarcPath)
+			end
+		end
+
+		if vscPaths and #vscPaths > 0 then
+			local newSettings = object({})
+			for k, v in pairs(luarc) do
+				newSettings["Lua." .. k] = v
+			end
+
+			for _, vscPath in ipairs(vscPaths) do
+				local oldSettings = readLuarc(vscPath)
+				extend(oldSettings, newSettings)
+				writeLuarc(oldSettings, vscPath)
+			end
+		end
+
+		if not luarcPaths and not vscPaths then
+			local projectDir = getProjectDir()
+			local luarcPath = getDefaultLuarcPath(projectDir)
+			if fs.exists(luarcPath) then
+				local oldLuarc = readLuarc(luarcPath)
+				extend(oldLuarc, luarc)
+				writeLuarc(oldLuarc, luarcPath)
+				return
+			end
+
+			local vscPath = getDefaultVscSettingsPath(projectDir)
+			if fs.exists(vscPath) then
+				local newSettings = object({})
+				for k, v in pairs(luarc) do
+					newSettings["Lua." .. k] = v
+				end
+
+				local oldSettings = readLuarc(vscPath)
+				extend(oldSettings, newSettings)
+				writeLuarc(oldSettings, vscPath)
+				return
+			end
+
+			-- generate a new .luarc.json if neither of the defaults exist
+			writeLuarc(luarc, luarcPath)
 		end
 	end
 end
