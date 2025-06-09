@@ -22,15 +22,39 @@ M.objectMt = objectMt
 
 ---@param t any[]
 ---@return any[]
-function M.array(t)
+local function array(t)
 	return setmetatable(t, arrayMt)
 end
+M.array = array
 
 ---@param t { [string]: any }
 ---@return { [string]: any }
-function M.object(t)
+local function object(t)
 	return setmetatable(t, objectMt)
 end
+M.object = object
+
+---@param value any
+---@return any t
+local function coerceJson(value)
+	if type(value) ~= "table" then
+		return value
+	end
+
+	if #value > 0 then
+		array(value)
+		for _, v in ipairs(value) do
+			coerceJson(v)
+		end
+	else
+		object(value)
+		for _, v in pairs(value) do
+			coerceJson(v)
+		end
+	end
+	return value
+end
+M.coerceJson = coerceJson
 
 ---@param value any
 ---@return boolean

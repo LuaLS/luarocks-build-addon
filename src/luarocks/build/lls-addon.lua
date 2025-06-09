@@ -10,6 +10,7 @@ local object = jsonUtil.object
 local isJsonArray = jsonUtil.isJsonArray
 local isJsonObject = jsonUtil.isJsonObject
 local readJsonFile = jsonUtil.readJsonFile
+local coerceJson = jsonUtil.coerceJson
 
 local tableUtil = require("luarocks.build.lls-addon.table-util")
 local extend = tableUtil.extend
@@ -116,11 +117,11 @@ local function readEnvPaths(envVariable)
 end
 
 ---merges ('config.json').settings into .luarc.json
----@param source string
----@param luarc table
----@return table luarc
-local function copyConfigSettings(source, luarc)
-	local config = readJsonFile(source)
+---@param sourcePath string
+---@param luarc { [string]: any }
+---@return { [string]: any } luarc
+local function copyConfigSettings(sourcePath, luarc)
+	local config = readJsonFile(sourcePath)
 
 	if not isJsonObject(config) then
 		print("Root of 'config.json' is not an object, skipping")
@@ -130,7 +131,7 @@ local function copyConfigSettings(source, luarc)
 
 	local settings = config.settings
 	if not isJsonObject(settings) then
-		print("key 'settings' of " .. source .. " is not an object, skipping")
+		print("key 'settings' of " .. sourcePath .. " is not an object, skipping")
 		return luarc
 	end
 	---@cast settings { [string]: any }
@@ -142,6 +143,19 @@ local function copyConfigSettings(source, luarc)
 	end
 
 	return extend(luarc, unnest2(settingsNoPrefix))
+end
+
+---@param settings { [string]: any }
+---@param luarc { [string]: any }
+---@return { [string]: any } luarc
+local function copyBuildSettings(settings, luarc)
+	settings = coerceJson(settings)
+	if not isJsonObject(settings) then
+		error("'rockspec.build.settings' is not an object.")
+	end
+
+	print("Merging 'rockspec.build.settings' into .luarc.json")
+	return extend(luarc, unnest2(settings))
 end
 
 ---@param source string
@@ -197,8 +211,12 @@ local function addFiles(rockspec)
 		luarc["runtime.plugin"] = pluginDestination
 	end
 
+	local rockspecSettings = rockspec.build["settings"]
 	local configSource = dir.path(fs.current_dir(), "config.json")
-	if fs.exists(configSource) then
+	if rockspecSettings ~= nil then
+		luarc = luarc or object({})
+		luarc = copyBuildSettings(rockspecSettings, luarc)
+	elseif fs.exists(configSource) then
 		copyFile(configSource, dir.path(installDirectory, "config.json"))
 
 		-- also merge 'settings' from 'config.json' into .luarc.json

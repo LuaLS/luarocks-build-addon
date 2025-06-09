@@ -211,6 +211,7 @@ describe("#slow behavior", function()
 			["hover.enable"] = false,
 		}, luarc)
 	end)
+
 	it("overwrites existing .vscode/settings.json", function()
 		local dir = "with-config-and-existing-vsc-settings"
 		copySettings(dir)
@@ -226,6 +227,7 @@ describe("#slow behavior", function()
 			["Lua.hover.enable"] = false,
 		}, settings)
 	end)
+
 	it("overwrites .luarc.json and not .vscode/settings.json when former exists", function()
 		local dir = "with-config-and-existing-luarc-and-vsc-settings"
 		copyLuarc(dir)
@@ -245,5 +247,29 @@ describe("#slow behavior", function()
 			["Lua.completion.autoRequire"] = true,
 			["Lua.hover.enable"] = true,
 		}, settings)
+	end)
+
+	it("works when there is rockspec.build.settings", function()
+		local dir = "with-rockspec-settings"
+		assert.is_true(makeProject(dir))
+		finally(function()
+			cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
+		end)
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
+		assert.are_same({
+			["hover.enable"] = true,
+		}, luarc)
+	end)
+	it("works when there is rockspec.build.settings", function()
+		local dir = "with-rockspec-settings"
+		assert.is_true(makeProject(dir))
+		finally(function()
+			cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
+		end)
+		assert.is_false(fileExists(installDir(dir, "config.json")))
+		local luarc = readJsonFile(path(dir, ".luarc.json"))
+		assert.are_same({
+			["hover.enable"] = true,
+		}, luarc)
 	end)
 end)
