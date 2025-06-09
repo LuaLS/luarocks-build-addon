@@ -149,30 +149,4 @@ local function unnest2(t)
 end
 M.unnest2 = unnest2
 
----unnest an object up to `levels` levels
----@param t { [string]: unknown }
----@param levels integer
----@param path? string[]
-local function unnest(t, levels, path)
-	path = path or {}
-	for k, subT in pairs(t) do
-		-- 'workspace.library' reduces levels by 2
-		-- 'workspace': 'library' reduces levels by 1
-		local oldLen = #path
-		for subK in string.gmatch(k, "[^%.]+") do
-			table.insert(path, subK)
-		end
-		levels = levels - #path + oldLen
-		if isJsonObject(subT) and levels > 0 then
-			unnest(t, levels, path)
-			for subK, v in pairs(subT) do
-				local newK = k .. "." .. subK
-				t[newK] = v
-			end
-			t[k] = nil
-		end
-	end
-end
-M.unnest = unnest
-
 return M
