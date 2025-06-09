@@ -26,16 +26,25 @@ rockspec_format = "3.0"
 package = "cc-tweaked"
 version = "dev-1"
 source = {
-   url = "https://gitlab.com/carsakiller/cc-tweaked-documentation"
+	url = "https://gitlab.com/carsakiller/cc-tweaked-documentation",
 }
 description = {
-   summary = "LuaCATS annotations for CC:Tweaked",
-   detailed = "Manually created LuaCATS annotations for Minecraft's CC:Tweaked computer mod",
-   homepage = "https://gitlab.com/carsakiller/cc-tweaked-documentation",
-   license = "MIT"
+	summary = "LuaCATS annotations for CC:Tweaked",
+	detailed = "Manually created LuaCATS annotations for Minecraft's CC:Tweaked computer mod",
+	homepage = "https://gitlab.com/carsakiller/cc-tweaked-documentation",
+	license = "MIT",
 }
 build = {
-   type = "lls-addon"
+	type = "lls-addon",
+	settings = {
+      runtime = {
+         version = "Lua 5.3",
+         builtin = {
+            io = "disable",
+            os = "disable",
+         },
+      },
+	},
 }
 ```
 
