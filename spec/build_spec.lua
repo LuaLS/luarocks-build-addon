@@ -1,7 +1,11 @@
+---@diagnostic disable-next-line: unknown-cast-variable
+---@cast assert luassert
+
 _G._TEST = true
 local lfs = require("lfs")
 
 local jsonUtil = require("luarocks.build.lls-addon.json-util")
+local readJsonFile = jsonUtil.readJsonFile
 
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
@@ -22,7 +26,6 @@ local function fileExists(path)
 	return lfs.attributes(path) ~= nil
 end
 
-local readJsonFile = jsonUtil.readJsonFile
 
 ---@param dir string
 ---@param ... string

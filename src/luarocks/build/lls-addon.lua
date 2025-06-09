@@ -5,15 +5,18 @@ local cfg = require("luarocks.core.cfg")
 local json = require("luarocks.vendor.dkjson")
 
 local jsonUtil = require("luarocks.build.lls-addon.json-util")
-local extend = require("luarocks.build.lls-addon.extend")
-
-local M = {}
-
 local array = jsonUtil.array
 local object = jsonUtil.object
 local isJsonArray = jsonUtil.isJsonArray
 local isJsonObject = jsonUtil.isJsonObject
 local readJsonFile = jsonUtil.readJsonFile
+
+local tableUtil = require("luarocks.build.lls-addon.table-util")
+local extend = tableUtil.extend
+local unnest2 = tableUtil.unnest2
+
+local M = {}
+
 
 local function assertContext(context, ...)
 	local s, msg = ...
@@ -118,7 +121,7 @@ local function copyConfigSettings(source, luarc)
 		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
 	end
 
-	return extend(luarc, settingsNoPrefix)
+	return extend(luarc, unnest2(settingsNoPrefix))
 end
 
 ---@param source string

@@ -3,7 +3,7 @@
         "$USERPROFILE/Documents/References/luarocks/src",
         "${addons}/luafilesystem/module/library",
         "${addons}/busted/module/library",
-        "${3rd}/luassert/library"
+        "${addons}/luassert/module/library"
     ],
     "runtime.version": "Lua 5.4",
     "runtime.path": [
