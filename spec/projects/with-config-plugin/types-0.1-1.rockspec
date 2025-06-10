@@ -1,5 +1,5 @@
 rockspec_format = "3.0"
-package = "with-lib"
+package = "types"
 version = "0.1-1"
 
 source = {

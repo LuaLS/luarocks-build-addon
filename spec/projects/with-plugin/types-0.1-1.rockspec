@@ -1,5 +1,5 @@
 rockspec_format = "3.0"
-package = "with-rockspec-settings"
+package = "types"
 version = "0.1-1"
 
 source = {
@@ -8,7 +8,4 @@ source = {
 
 build = {
 	type = "lls-addon",
-	settings = {
-		["hover.enable"] = true
-	}
 }

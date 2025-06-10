@@ -26,11 +26,13 @@ local function fileExists(path)
 	return lfs.attributes(path) ~= nil
 end
 
+local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", "types", "0.1-1")
+
 ---@param dir string
 ---@param ... string
 ---@return string
 local function installDir(dir, ...)
-	return path(dir, "lua_modules", "lib", "luarocks", "rocks-5.4", dir, "0.1-1", ...)
+	return path(dir, INSTALL_DIR, ...)
 end
 
 ---@param dir string

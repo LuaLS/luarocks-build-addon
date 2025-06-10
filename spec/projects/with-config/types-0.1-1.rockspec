@@ -1,4 +1,4 @@
-package = "with-config"
+package = "types"
 version = "0.1-1"
 source = {
    url = "git+https://github.com/LuaLS/luarocks-build-addon"
