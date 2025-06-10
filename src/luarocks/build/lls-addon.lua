@@ -18,6 +18,10 @@ local unnest2 = tableUtil.unnest2
 
 local M = {}
 
+local DIR_SEP = string.sub(package.config, 1, 1)
+local PATH_SEP = string.sub(package.config, 3, 3)
+local PATH_SEP_PATTERN = "[^%" .. PATH_SEP .. "]+"
+
 local function assertContext(context, ...)
 	local s, msg = ...
 	if not s then
@@ -85,21 +89,6 @@ local function getProjectDir()
 	return projectDir
 end
 
----@param projectDir string
----@return string
-local function getDefaultVscSettingsPath(projectDir)
-	return dir.path(projectDir, ".vscode", "settings.json")
-end
-
----@param projectDir string
----@return string
-local function getDefaultLuarcPath(projectDir)
-	return dir.path(projectDir, ".luarc.json")
-end
-
-local SEP = string.sub(package.config, 3, 3)
-local SEP_PATTERN = "[^%" .. SEP .. "]+"
-
 ---@param envVariable string
 ---@return string[]? paths
 local function readEnvPaths(envVariable)
@@ -110,7 +99,7 @@ local function readEnvPaths(envVariable)
 	end
 
 	local paths = {}
-	for luarcPath in string.gmatch(PATH, SEP_PATTERN) do
+	for luarcPath in string.gmatch(PATH, PATH_SEP_PATTERN) do
 		table.insert(paths, luarcPath)
 	end
 	return paths
@@ -185,13 +174,21 @@ local function addFiles(rockspec)
 	local version = rockspec.version
 	print("Building addon " .. name .. " @ " .. version)
 
-	local installDirectory = path.install_dir(name, version)
+	local projectDir = getProjectDir()
+	local installDir = path.install_dir(name, version)
+	if not os.getenv("LLSADDON_ABSPATH") and installDir:sub(1, #projectDir) == projectDir then
+		print("Making install directory relative to " .. projectDir)
+		installDir = installDir:sub(#projectDir + 1)
+		if installDir:sub(1, 1) == DIR_SEP then
+			installDir = installDir:sub(2)
+		end
+	end
 
 	local luarc ---@type { [string]: any }
 
 	local librarySource = dir.path(fs.current_dir(), "library")
 	if fs.exists(librarySource) then
-		local libraryDestination = dir.path(installDirectory, "library")
+		local libraryDestination = dir.path(installDir, "library")
 		copyDirectory(librarySource, libraryDestination)
 
 		-- also insert the library/ directory into 'workspace.library'
@@ -202,7 +199,7 @@ local function addFiles(rockspec)
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
 	if fs.exists(pluginSource) then
-		local pluginDestination = dir.path(installDirectory, "plugin.lua")
+		local pluginDestination = dir.path(installDir, "plugin.lua")
 		copyFile(pluginSource, pluginDestination)
 
 		-- also set 'runtime.plugin' in .luarc.json
@@ -217,7 +214,7 @@ local function addFiles(rockspec)
 		luarc = luarc or object({})
 		luarc = copyBuildSettings(rockspecSettings, luarc)
 	elseif fs.exists(configSource) then
-		copyFile(configSource, dir.path(installDirectory, "config.json"))
+		copyFile(configSource, dir.path(installDir, "config.json"))
 
 		-- also merge 'settings' from 'config.json' into .luarc.json
 		luarc = luarc or object({})
@@ -250,8 +247,8 @@ local function addFiles(rockspec)
 		end
 
 		if not luarcPaths and not vscPaths then
-			local projectDir = getProjectDir()
-			local luarcPath = getDefaultLuarcPath(projectDir)
+			print("No paths found, looking for .luarc.json in project directory")
+			local luarcPath = dir.path(projectDir, ".luarc.json")
 			if fs.exists(luarcPath) then
 				local oldLuarc = readLuarc(luarcPath)
 				extend(oldLuarc, luarc)
@@ -259,7 +256,8 @@ local function addFiles(rockspec)
 				return
 			end
 
-			local vscPath = getDefaultVscSettingsPath(projectDir)
+			print(".luarc.json not found, looking for .vscode/settings.json in project directory")
+			local vscPath = dir.path(projectDir, ".vscode", "settings.json")
 			if fs.exists(vscPath) then
 				local newSettings = object({})
 				for k, v in pairs(luarc) do
@@ -273,6 +271,7 @@ local function addFiles(rockspec)
 			end
 
 			-- generate a new .luarc.json if neither of the defaults exist
+			print(".vscode/settings.json not found, generating new .luarc.json")
 			writeLuarc(luarc, luarcPath)
 		end
 	end
