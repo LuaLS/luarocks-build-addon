@@ -12,38 +12,31 @@ local unnestKey = tableUtil.unnestKey
 
 describe("unnestKey", function()
 	it("acts the same regardless of merge order", function()
-		local obj = object({
+		local obj1 = object({
 			runtime = object({
 				special = object({ os = "disable" }),
 			}),
 			["runtime.special"] = object({ io = "enable" }),
 		})
-		local unnested = {}
-		unnestKey(obj, "runtime", unnested)
-		unnestKey(obj, "runtime.special", unnested)
-		assert.are_same({
-			["runtime.special"] = {
-				os = "disable",
-				io = "enable",
-			},
-		}, unnested)
-	end)
-	it("acts the same regardless of merge order", function()
-		local obj = object({
+		local obj2 = object({
 			runtime = object({
 				special = object({ os = "disable" }),
 			}),
 			["runtime.special"] = object({ io = "enable" }),
 		})
-		local unnested = {}
-		unnestKey(obj, "runtime.special", unnested)
-		unnestKey(obj, "runtime", unnested)
+		local unnested1 = {}
+		local unnested2 = {}
+		unnestKey(obj1, "runtime", unnested1)
+		unnestKey(obj1, "runtime.special", unnested1)
+		unnestKey(obj2, "runtime.special", unnested2)
+		unnestKey(obj2, "runtime", unnested2)
 		assert.are_same({
 			["runtime.special"] = {
 				os = "disable",
 				io = "enable",
 			},
-		}, unnested)
+		}, unnested1)
+		assert.are_same(unnested1, unnested2)
 	end)
 end)
 

@@ -91,7 +91,7 @@ end
 
 ---@param pathsString string?
 ---@return string[]? paths
-local function parsePaths(pathsString)
+local function parsePathList(pathsString)
 	if not pathsString then
 		return nil
 	end
@@ -222,7 +222,7 @@ function M.addFiles(rockspec, env)
 
 	if luarc then
 		print("Looking for paths in LLSADDON_LUARCPATH")
-		local luarcPaths = parsePaths(env.LUARCPATH)
+		local luarcPaths = parsePathList(env.LUARCPATH)
 
 		if luarcPaths then
 			for _, luarcPath in ipairs(luarcPaths) do
@@ -233,7 +233,7 @@ function M.addFiles(rockspec, env)
 		end
 
 		print("Looking for paths in LLSADDON_VSCSETTINGSPATH")
-		local vscPaths = parsePaths(env.VSCSETTINGSPATH)
+		local vscPaths = parsePathList(env.VSCSETTINGSPATH)
 		if vscPaths and #vscPaths > 0 then
 			local newSettings = object({})
 			for k, v in pairs(luarc) do

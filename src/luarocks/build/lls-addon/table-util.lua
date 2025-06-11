@@ -5,6 +5,16 @@ local isJsonObject = jsonUtil.isJsonObject
 
 local M = {}
 
+---@param k string
+---@return string[] path
+local function parseSettingsPath(k)
+	local path = {} ---@type string[]
+	for subK in string.gmatch(k, "[^%.]+") do
+		table.insert(path, subK)
+	end
+	return path
+end
+
 local tableDeepEqual ---@type fun(a: table, b: table): boolean
 
 ---checks if all fields of `a` is equal to all fields of `b` and vice-versa.
@@ -66,10 +76,7 @@ local function extend(old, new)
 		---@cast new { [string]: any }
 		for k, v in pairs(new) do
 			-- if `old` has `firstKey`, merge settings in a nested way
-			local path = {} ---@type string[]
-			for subKey in string.gmatch(k, "[^%.]+") do
-				table.insert(path, subKey)
-			end
+			local path = parseSettingsPath(k)
 			local keyFound = false
 			for i = 1, #path - 1 do
 				local firstKey = table.concat(path, ".", 1, i)
@@ -104,10 +111,7 @@ local function unnestKey(t, k, unnested)
 		return
 	end
 
-	local path = {}
-	for subK in string.gmatch(k, "[^%.]+") do
-		table.insert(path, subK)
-	end
+	local path = parseSettingsPath(k)
 	if #path >= 2 then
 		unnested[k] = extend(unnested[k], subT)
 		return
@@ -134,7 +138,7 @@ M.unnestKey = unnestKey
 
 ---@param t { [string]: any }
 ---@return { [string]: any } unnested
-local function unnest2(t)
+function M.unnest2(t)
 	local unnested = object({}) ---@type { [string]: any }
 	local keys = {}
 	for k in pairs(t) do
@@ -147,6 +151,31 @@ local function unnest2(t)
 	end
 	return unnested
 end
-M.unnest2 = unnest2
+
+---@param t { [string]: any }
+---@return { [string]: any } nested
+function M.nest2(t)
+	local nested = object({})
+	local keys = {}
+	for k in pairs(t) do
+		table.insert(keys, k)
+	end
+	table.sort(keys)
+
+	for _, k in ipairs(keys) do
+		local firstKey, rest = string.match(k, "^([^%.]+)%.(.+)$")
+		if firstKey then
+			local obj = nested[firstKey]
+			if not obj then
+				obj = object({})
+				nested[firstKey] = obj
+			end
+			obj[rest] = extend(obj[rest], t[k])
+		else
+			nested[k] = extend(nested[k], t[k])
+		end
+	end
+	return nested
+end
 
 return M
