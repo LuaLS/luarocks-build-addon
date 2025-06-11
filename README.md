@@ -59,8 +59,12 @@ You can try adding plugins or other settings to see if everything is working as 
 
 ## Testing
 
-1. Set the contents of `.luarocks/default-lua-version.lua` to `return 5.4`. The build fails otherwise, I don't know why.
-2. Run `luarocks test`.
+```sh
+# the build fails if this is not set to 5.4, I don't know why
+echo "return 5.4" > .luarocks/default-lua-version.lua
+luarocks --local --lua-version=5.4 make
+luarocks test
+```
 
 ---
 
