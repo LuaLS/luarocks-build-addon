@@ -89,17 +89,15 @@ local function getProjectDir()
 	return projectDir
 end
 
----@param envVariable string
+---@param pathsString string?
 ---@return string[]? paths
-local function readEnvPaths(envVariable)
-	print("looking for paths in " .. envVariable)
-	local PATH = os.getenv(envVariable)
-	if not PATH then
+local function parsePaths(pathsString)
+	if not pathsString then
 		return nil
 	end
 
 	local paths = {}
-	for luarcPath in string.gmatch(PATH, PATH_SEP_PATTERN) do
+	for luarcPath in string.gmatch(pathsString, PATH_SEP_PATTERN) do
 		table.insert(paths, luarcPath)
 	end
 	return paths
@@ -169,14 +167,15 @@ end
 ---- modifies or creates a project-scoped `.luarc.json`, which will contain
 ---  references to the above copied files
 ---@param rockspec luarocks.rockspec
-local function addFiles(rockspec)
+---@param env { [string]: string? }
+function M.addFiles(rockspec, env)
 	local name = rockspec.package
 	local version = rockspec.version
 	print("Building addon " .. name .. " @ " .. version)
 
 	local projectDir = getProjectDir()
 	local installDir = path.install_dir(name, version)
-	if not os.getenv("LLSADDON_ABSPATH") and installDir:sub(1, #projectDir) == projectDir then
+	if not env.ABSPATH and installDir:sub(1, #projectDir) == projectDir then
 		print("Making install directory relative to " .. projectDir)
 		installDir = installDir:sub(#projectDir + 1)
 		if installDir:sub(1, 1) == DIR_SEP then
@@ -222,8 +221,8 @@ local function addFiles(rockspec)
 	end
 
 	if luarc then
-		local luarcPaths = readEnvPaths("LLSADDON_LUARCPATH")
-		local vscPaths = readEnvPaths("LLSADDON_VSCSETTINGSPATH")
+		print("Looking for paths in LLSADDON_LUARCPATH")
+		local luarcPaths = parsePaths(env.LUARCPATH)
 
 		if luarcPaths then
 			for _, luarcPath in ipairs(luarcPaths) do
@@ -233,6 +232,8 @@ local function addFiles(rockspec)
 			end
 		end
 
+		print("Looking for paths in LLSADDON_VSCSETTINGSPATH")
+		local vscPaths = parsePaths(env.VSCSETTINGSPATH)
 		if vscPaths and #vscPaths > 0 then
 			local newSettings = object({})
 			for k, v in pairs(luarc) do
@@ -282,7 +283,13 @@ end
 function M.run(rockspec)
 	assert(rockspec:type() == "rockspec", "argument is not a rockspec")
 
-	local s, msg = pcall(addFiles, rockspec)
+	local env = {
+		ABSPATH = os.getenv("LLSADDON_ABSPATH"),
+		LUARCPATH = os.getenv("LLSADDON_LUARCPATH"),
+		VSCSETTINGSPATH = os.getenv("LLSADDON_VSCSETTINGSPATH"),
+	}
+
+	local s, msg = pcall(M.addFiles, rockspec, env)
 	if not s then
 		---@cast msg string
 		local match = msg:match("%[BuildError%]%: (.*)$")
