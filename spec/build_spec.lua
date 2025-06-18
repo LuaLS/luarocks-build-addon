@@ -105,7 +105,9 @@ describe("#slow behavior", function()
 		end)
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "library")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.are_same({ path(INSTALL_DIR, "library") }, luarc["workspace.library"])
+		assert.are_same({
+			workspace = { library = { path(INSTALL_DIR, "library") } },
+		}, luarc)
 	end)
 
 	it("works when there is a config included", function()
@@ -116,7 +118,9 @@ describe("#slow behavior", function()
 		end)
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "config.json")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.is_true(luarc["example"])
+		assert.are_same({
+			example = true,
+		}, luarc)
 	end)
 
 	it("works when there is a plugin included", function()
@@ -127,7 +131,9 @@ describe("#slow behavior", function()
 		end)
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "plugin.lua")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.are_equal(path(INSTALL_DIR, "plugin.lua"), luarc["runtime.plugin"])
+		assert.are_same({
+			runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+		}, luarc)
 	end)
 
 	it("works when there is a library and config included", function()
@@ -139,8 +145,10 @@ describe("#slow behavior", function()
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "library")))
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "config.json")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.are_same({ path(INSTALL_DIR, "library") }, luarc["workspace.library"])
-		assert.is_true(luarc["example"])
+		assert.are_same({
+			workspace = { library = { path(INSTALL_DIR, "library") } },
+			example = true,
+		}, luarc)
 	end)
 
 	it("works when there is a library and plugin included", function()
@@ -152,8 +160,10 @@ describe("#slow behavior", function()
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "library")))
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "plugin.lua")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.are_same({ path(INSTALL_DIR, "library") }, luarc["workspace.library"])
-		assert.are_equal(path(INSTALL_DIR, "plugin.lua"), luarc["runtime.plugin"])
+		assert.are_same({
+			workspace = { library = { path(INSTALL_DIR, "library") } },
+			runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+		}, luarc)
 	end)
 
 	it("works when there is a config and plugin included", function()
@@ -165,8 +175,10 @@ describe("#slow behavior", function()
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "config.json")))
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "plugin.lua")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.is_true(luarc["example"])
-		assert.are_equal(path(INSTALL_DIR, "plugin.lua"), luarc["runtime.plugin"])
+		assert.are_same({
+			example = true,
+			runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+		}, luarc)
 	end)
 
 	it("works when there is a library, config, and plugin included", function()
@@ -179,9 +191,11 @@ describe("#slow behavior", function()
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "config.json")))
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "plugin.lua")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.are_same({ path(INSTALL_DIR, "library") }, luarc["workspace.library"])
-		assert.is_true(luarc["example"])
-		assert.are_equal(path(INSTALL_DIR, "plugin.lua"), luarc["runtime.plugin"])
+		assert.are_same({
+			workspace = { library = { path(INSTALL_DIR, "library") } },
+			example = true,
+			runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+		}, luarc)
 	end)
 
 	it("overwrites existing .luarc.json", function()
@@ -194,7 +208,9 @@ describe("#slow behavior", function()
 		assert.is_true(fileExists(path(dir, INSTALL_DIR, "config.json")))
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.are_same({
-			completion = { autoRequire = false },
+			completion = {
+				autoRequire = false,
+			},
 			["hover.enable"] = false,
 		}, luarc)
 	end)
@@ -244,19 +260,7 @@ describe("#slow behavior", function()
 		end)
 		local luarc = readJsonFile(path(dir, ".luarc.json"))
 		assert.are_same({
-			["hover.enable"] = true,
-		}, luarc)
-	end)
-	it("works when there is rockspec.build.settings", function()
-		local dir = "with-rockspec-settings"
-		assert.is_true(makeProject(dir))
-		finally(function()
-			cleanProject(dir, { ".luarocks", "lua_modules" }, { ".luarc.json" })
-		end)
-		assert.is_false(fileExists(path(dir, INSTALL_DIR, "config.json")))
-		local luarc = readJsonFile(path(dir, ".luarc.json"))
-		assert.are_same({
-			["hover.enable"] = true,
+			hover = { enable = true },
 		}, luarc)
 	end)
 end)
