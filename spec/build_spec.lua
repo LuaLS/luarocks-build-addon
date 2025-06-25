@@ -198,7 +198,7 @@ describe("#slow behavior", function()
 	end)
 
 	it("overwrites existing .luarc.json", function()
-		local dir = "with-config-and-existing-luarc"
+		local dir = "with-config-luarc"
 		copyLuarc(dir)
 		assert.is_true(makeProject(dir))
 		finally(function()
@@ -215,7 +215,7 @@ describe("#slow behavior", function()
 	end)
 
 	it("overwrites existing .vscode/settings.json", function()
-		local dir = "with-config-and-existing-vsc-settings"
+		local dir = "with-config-vsc-settings"
 		copySettings(dir)
 		assert.is_true(makeProject(dir))
 		finally(function()
@@ -231,7 +231,7 @@ describe("#slow behavior", function()
 	end)
 
 	it("overwrites .luarc.json and not .vscode/settings.json when former exists", function()
-		local dir = "with-config-and-existing-luarc-and-vsc-settings"
+		local dir = "with-config-luarc-vsc-settings"
 		copyLuarc(dir)
 		copySettings(dir)
 		assert.is_true(makeProject(dir))
