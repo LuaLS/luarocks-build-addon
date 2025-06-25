@@ -219,9 +219,8 @@ end
 
 ---@param projectDir string
 ---@param luarc { [string]: any }
----@param rockspec luarocks.rockspec
 ---@param env { [string]: string? }
-local function updateLuarcFiles(projectDir, luarc, rockspec, env)
+local function updateLuarcFiles(projectDir, luarc, env)
 	print("Looking for paths in LLSADDON_LUARCPATH")
 	local luarcPaths = parsePathList(env.LUARCPATH)
 
@@ -292,7 +291,7 @@ function M.addFiles(rockspec, env)
 	local luarc = compileLuarc(projectDir, rockspec, env)
 
 	if luarc then
-		updateLuarcFiles(projectDir, luarc, rockspec, env)
+		updateLuarcFiles(projectDir, luarc, env)
 	end
 end
 
