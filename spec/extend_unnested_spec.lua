@@ -1,8 +1,6 @@
 ---@diagnostic disable-next-line: unknown-cast-variable
 ---@cast assert luassert
 
-_G._TEST = true
-
 local tableUtil = require("luarocks.build.lls-addon.table-util")
 local extendUnnested = tableUtil.extendUnnested
 local unnest2 = tableUtil.unnest2

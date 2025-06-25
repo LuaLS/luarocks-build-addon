@@ -1,7 +1,6 @@
 ---@diagnostic disable-next-line: unknown-cast-variable
 ---@cast assert luassert
 
-_G._TEST = true
 local lfs = require("lfs") ---@type LuaFileSystem
 
 local jsonUtil = require("luarocks.build.lls-addon.json-util")

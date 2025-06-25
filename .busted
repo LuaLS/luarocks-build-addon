@@ -1,5 +1,11 @@
 return {
-    default = {
-        output = "plainTerminal"
+    _all = {
+        output = "plainTerminal",
+        ["exclude-tags"] = "skip",
+        helper = "scripts/busted-helper.lua",
+    },
+    default = {},
+    fast = {
+        ["exclude-tags"] = "skip,slow",
     }
 }
