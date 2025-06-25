@@ -9,8 +9,11 @@ source = {
 build = {
 	type = "lls-addon",
 	settings = {
+		completion = {
+			requireSeparator = "/",
+		},
 		hover = {
-			enable = true,
+			enable = false,
 		},
 	},
 }

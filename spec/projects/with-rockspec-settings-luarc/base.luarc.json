@@ -1,0 +1,6 @@
+{
+    "completion": {
+        "autoRequire": true
+    },
+    "hover.enable": true
+}

@@ -1,6 +1,7 @@
 {
     "completion": {
-        "autoRequire": true
+        "autoRequire": true,
+        "requireSeparator": "/"
     },
     "hover.enable": true
 }
