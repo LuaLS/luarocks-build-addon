@@ -10,8 +10,8 @@ assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
 local SEP = package.config:sub(1, 1)
 local NULL = SEP == "\\" and "NUL" or "/dev/null"
-local RMDIR_CMD = SEP == "\\" and "rmdir /S /Q %s" or "rm -rf %s"
-local RM_CMD = SEP == "\\" and string.format("del %%s 2> %s", NULL) or "rm -f %s"
+local RMDIR_CMD = SEP == "\\" and "RMDIR /S /Q %s" or "rm -rf %s"
+local RM_CMD = SEP == "\\" and string.format("DEL /Q %%s > %s", NULL) or "rm -f %s"
 
 ---@param ... string
 ---@return string
@@ -20,9 +20,17 @@ local function path(...)
 end
 
 ---@param path string
----@return boolean, string?
+---@return boolean
 local function fileExists(path)
-	return lfs.attributes(path) ~= nil
+	local attrs = lfs.attributes(path)
+	return attrs ~= nil and attrs.mode == "file"
+end
+
+---@param path string
+---@return boolean
+local function folderExists(path)
+	local attrs = lfs.attributes(path)
+	return attrs ~= nil and attrs.mode == "directory"
 end
 
 local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", "types", "0.1-1")
@@ -70,11 +78,15 @@ local function cleanProject(dirPaths, filePaths)
 	local commands = {}
 	for _, dirPath in ipairs(dirPaths) do
 		assert(dirPath:sub(1, 1) ~= "/", "don't pass paths starting at root")
-		table.insert(commands, RMDIR_CMD:format(dirPath))
+		if folderExists(dirPath) then
+			table.insert(commands, RMDIR_CMD:format(dirPath))
+		end
 	end
 	for _, filePath in ipairs(filePaths) do
 		assert(filePath:sub(1, 1) ~= "/", "don't pass paths starting at root")
-		table.insert(commands, RM_CMD:format(filePath))
+		if fileExists(filePath) then
+			table.insert(commands, RM_CMD:format(filePath))
+		end
 	end
 
 	return os.execute(table.concat(commands, " && "))
@@ -91,9 +103,15 @@ local function withProject(dir, handler)
 			table.insert(cleanupAll, fun)
 		end
 		finally(function()
+			local result = true
+			local message = nil
 			for i = #cleanupAll, 1, -1 do
-				cleanupAll[i]()
+				local s, msg = pcall(cleanupAll[i])
+				result = result and s
+				message = message or msg
 			end
+
+			assert(result, message)
 		end)
 		local cd = assert(lfs.currentdir())
 		assert(lfs.chdir(dir))
@@ -122,7 +140,7 @@ describe("#slow behavior", function()
 	it(
 		"works when there is only a rockspec",
 		withProject("rockspec-only", function()
-			assert.is_true(fileExists(INSTALL_DIR))
+			assert.is_true(folderExists(INSTALL_DIR))
 			assert.is_false(fileExists(".luarc.json"))
 		end)
 	)
@@ -130,7 +148,7 @@ describe("#slow behavior", function()
 	it(
 		"works when there is a library included",
 		withProject("with-lib", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "library")))
+			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			local luarc = readJsonFile(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
@@ -163,7 +181,7 @@ describe("#slow behavior", function()
 	it(
 		"works when there is a library and config included",
 		withProject("with-lib-config", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "library")))
+			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
 			local luarc = readJsonFile(".luarc.json")
 			assert.are_same({
@@ -176,7 +194,7 @@ describe("#slow behavior", function()
 	it(
 		"works when there is a library and plugin included",
 		withProject("with-lib-plugin", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "library")))
+			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
 			local luarc = readJsonFile(".luarc.json")
 			assert.are_same({
@@ -202,7 +220,7 @@ describe("#slow behavior", function()
 	it(
 		"works when there is a library, config, and plugin included",
 		withProject("with-lib-config-plugin", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "library")))
+			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
 			local luarc = readJsonFile(".luarc.json")
