@@ -58,7 +58,7 @@ M.contains = contains
 ---@param old unknown
 ---@param new unknown
 ---@return any
-local function extendSimple(old, new)
+local function extendNonObject(old, new)
 	if isJsonArray(old) and isJsonArray(new) then -- treat arrays like sets
 		---@cast old unknown[]
 		---@cast new unknown[]
@@ -68,7 +68,16 @@ local function extendSimple(old, new)
 			end
 		end
 		return old
-	elseif isJsonObject(old) and isJsonObject(new) then
+	else
+		return new
+	end
+end
+
+---@param old unknown
+---@param new unknown
+---@return any
+local function extendSimple(old, new)
+	if isJsonObject(old) and isJsonObject(new) then
 		---@cast old { [string]: unknown }
 		---@cast new { [string]: unknown }
 		for k, v in pairs(new) do
@@ -76,121 +85,81 @@ local function extendSimple(old, new)
 		end
 		return old
 	else
-		return new
+		return extendNonObject(old, new)
 	end
 end
 
----- if both the nested and unnested key exists, delete the unnested
----  key and write to the nested key
----- if only the unnested key exists, write to that
----- otherwise, write to the nested key
----@param old { [string]: unknown }
----@param k string
----@param v unknown
-local function extendNestedKey(old, k, v)
-	local oldV = old[k]
-	if isJsonObject(v) then
-		---@cast v { [string]: unknown }
-		if isJsonObject(oldV) then
-			---@cast oldV { [string]: unknown }
-			-- the nested key might exist
-			-- - if the nested key exists, merge the unnested key and
-			--   write to the nested key
-			-- - if the nested key does not exist, check for an unnested key
-			--   if that exists, write to it
-			-- - otherwise, write to the nested key
-			for subK, subV in pairs(v) do
-				local oldSubV = oldV[subK]
-				local unnestedK = k .. "." .. subK
-				local unnestedOldSubV = old[unnestedK]
-				if oldSubV ~= nil then
-					old[unnestedK] = nil
-					oldV[subK] = extendSimple(extendSimple(unnestedOldSubV, oldSubV), subV)
-				elseif unnestedOldSubV ~= nil then
-					old[unnestedK] = extendSimple(unnestedOldSubV, subV)
-				else
-					oldV[subK] = subV
-				end
+---@class lls-addon.path-getter
+---@field get fun(t: table, path: string): (v: any)
+---@field set fun(t: table, path: string, v: any)
+
+---@type lls-addon.path-getter
+local nestedPath = {
+	get = function(t, path)
+		local v = t
+		for k in string.gmatch(path, "[^%.]+") do
+			if isJsonObject(v) then
+				v = v[k]
+			else
+				return nil
 			end
-		else
-			-- there's no way the nested key exists
-			-- write to the unnested key if it exists, otherwise write
-			-- to the nested key
-			for subK, subV in pairs(v) do
-				local unnestedK = k .. "." .. subK
-				local unnestedOldSubV = old[unnestedK]
-				if unnestedOldSubV ~= nil then
-					old[unnestedK] = extendSimple(unnestedOldSubV, subV)
+		end
+		return v
+	end,
+	set = function(t, path, v)
+		local keys = {}
+		for k in string.gmatch(path, "[^%.]+") do
+			table.insert(keys, k)
+		end
+
+		local subTs = { t }
+		local subT = t
+		for i = 1, #keys - 1 do
+			local k = keys[i]
+			local found = subT[k]
+			if isJsonObject(found) then
+				subT = found
+			elseif v ~= nil then
+				local newT = object({})
+				subT, subT[k] = newT, newT
+			else
+				goto stopSettingKeys
+			end
+			table.insert(subTs, subT)
+		end
+		subT[keys[#keys]] = v
+		::stopSettingKeys::
+
+		if v == nil then
+			-- remove any empty objects this created
+			for i = #subTs, 2, -1 do
+				if next(subTs[i]) == nil then
+					subTs[i - 1][keys[i - 1]] = nil
 				else
-					-- write to the nested key
-					if not isJsonObject(oldV) then
-						oldV = object({})
-						old[k] = oldV
-					end
-					oldV[subK] = subV
+					break
 				end
 			end
 		end
-	else
-		old[k] = extendSimple(oldV, v)
-	end
-end
+	end,
+}
+
+---@type lls-addon.path-getter
+local unnestedPath = {
+	get = function(t, path)
+		return t[path]
+	end,
+	set = function(t, path, v)
+		t[path] = v
+	end,
+}
 
 ---modifies `old` such that it contains all the properties of `new`.
 ---
----Arrays are treated like sets, so any new values will only be inserted if the
----array doesn't contain it.
+---if `nested == true`, the algorithm will prefer setting nested keys, and
+---unnested keys will be merged into nested keys if encountered.
 ---
----If `old` and `new` are objects, all keys from `new` are copied into `old`,
----preferring to write to nested keys
----@param old unknown
----@param new unknown
----@return any
-local function extendNested(old, new)
-	if isJsonObject(old) and isJsonObject(new) then
-		---@cast old { [string]: unknown }
-		---@cast new { [string]: unknown }
-		for k, v in pairs(new) do
-			extendNestedKey(old, k, v)
-		end
-		return old
-	else
-		return extendSimple(old, new)
-	end
-end
-M.extendNested = extendNested
-
----@param old { [string]: unknown }
----@param k string
----@param v unknown
-local function extendUnnestedkey(old, k, v)
-	local firstKey, rest = string.match(k, "^([^%.]+)%.(.*)$")
-	if firstKey == nil then
-		old[k] = extendSimple(old[k], v)
-		return
-	end
-
-	local oldV = old[firstKey]
-	if not isJsonObject(oldV) then
-		old[k] = extendSimple(old[k], v)
-		return
-	end
-
-	local oldSubV = oldV[rest]
-	if oldSubV == nil then
-		old[k] = extendSimple(old[k], v)
-		return
-	end
-
-	local unnestedOldSubV = old[k]
-	if unnestedOldSubV ~= nil then
-		oldV[rest] = extendSimple(extendSimple(old[k], oldSubV), v)
-	else
-		oldV[rest] = extendSimple(oldSubV, v)
-	end
-end
-
----modifies `old` such that it contains all the properties of `new`.
+---if `nested == false`, the algorithm will prefer setting unnested keys, and
+---nested keys will be merged into unnested keys if encountered.
 ---
 ---Arrays are treated like sets, so any new values will only be inserted if the
 ---array doesn't contain it.
@@ -198,24 +167,43 @@ end
 ---If `old` and `new` are objects, all keys in `new` must be unnested, i.e.
 ---`"workspace.library": []` instead of `"workspace": { "library": [] }`. Keys
 ---will not be copied correctly otherwise.
+---@param nested boolean -- whether to prefer setting keys in a nested way
 ---@param old unknown
 ---@param new unknown
----@return any
-local function extendUnnested(old, new)
+---@return any -- the extended value
+local function extend(nested, old, new)
 	if isJsonObject(old) and isJsonObject(new) then
 		---@cast old { [string]: unknown }
 		---@cast new { [string]: unknown }
+		local primary ---@type lls-addon.path-getter
+		local secondary ---@type lls-addon.path-getter
+		if nested then
+			primary, secondary = nestedPath, unnestedPath
+		else
+			primary, secondary = unnestedPath, nestedPath
+		end
+
 		for k, v in pairs(new) do
-			-- if `old` has `firstKey`, merge settings in a nested way
-			extendUnnestedkey(old, k, v)
+			local primV = primary.get(old, k)
+			local secV = secondary.get(old, k)
+			if primV ~= nil and secV ~= nil then
+				secondary.set(old, k, nil)
+				primary.set(old, k, extendSimple(extendSimple(secV, primV), v))
+			elseif primV ~= nil then
+				primary.set(old, k, extendSimple(primV, v))
+			elseif secV ~= nil then
+				secondary.set(old, k, extendSimple(secV, v))
+			else
+				primary.set(old, k, v)
+			end
 		end
 
 		return old
 	else
-		return extendSimple(old, new)
+		return extendNonObject(old, new)
 	end
 end
-M.extendUnnested = extendUnnested
+M.extend = extend
 
 ---@param t { [string]: any }
 ---@param k string
@@ -266,40 +254,6 @@ function M.unnest2(t)
 		unnestKey(t, k, unnested)
 	end
 	return unnested
-end
-
----@param t { [string]: any }
----@param k string
----@param nested { [string]: any }
-local function nestKey(t, k, nested)
-	local firstKey, rest = string.match(k, "^([^%.]+)%.(.+)$")
-	if not firstKey then
-		nested[k] = extendSimple(nested[k], t[k])
-		return
-	end
-
-	local obj = nested[firstKey]
-	if not obj then
-		obj = object({})
-		nested[firstKey] = obj
-	end
-	obj[rest] = extendSimple(obj[rest], t[k])
-end
-
----@param t { [string]: any }
----@return { [string]: any } nested
-function M.nest2(t)
-	local nested = object({})
-	local keys = {}
-	for k in pairs(t) do
-		table.insert(keys, k)
-	end
-	table.sort(keys)
-
-	for _, k in ipairs(keys) do
-		nestKey(t, k, nested)
-	end
-	return nested
 end
 
 return M

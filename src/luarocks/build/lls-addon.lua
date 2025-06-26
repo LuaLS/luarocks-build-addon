@@ -13,9 +13,7 @@ local readJsonFile = jsonUtil.readJsonFile
 local coerceJson = jsonUtil.coerceJson
 
 local tableUtil = require("luarocks.build.lls-addon.table-util")
-local extendNested = tableUtil.extendNested
-local extendUnnested = tableUtil.extendUnnested
-local nest2 = tableUtil.nest2
+local extend = tableUtil.extend
 local unnest2 = tableUtil.unnest2
 
 local M = {}
@@ -91,6 +89,8 @@ local function getProjectDir()
 	return projectDir
 end
 
+-- TODO: getInstallDir(projectDir)
+
 ---@param pathsString string?
 ---@return string[]? paths
 local function parsePathList(pathsString)
@@ -131,7 +131,7 @@ local function copyConfigSettings(sourcePath, luarc)
 		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
 	end
 
-	return extendNested(luarc, nest2(settingsNoPrefix))
+	return extend(false, luarc, unnest2(settingsNoPrefix))
 end
 
 ---@param settings { [string]: any }
@@ -144,7 +144,7 @@ local function copyBuildSettings(settings, luarc)
 	end
 
 	print("Merging 'rockspec.build.settings' into .luarc.json")
-	return extendNested(luarc, nest2(settings))
+	return extend(false, luarc, unnest2(settings))
 end
 
 ---@param source string
@@ -187,7 +187,7 @@ local function compileLuarc(projectDir, rockspec, env)
 		-- also insert the library/ directory into 'workspace.library'
 		luarc = luarc or object({})
 		print("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
-		luarc.workspace = object({ library = array({ libraryDestination }) })
+		luarc["workspace.library"] = array({ libraryDestination })
 	end
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
@@ -198,7 +198,7 @@ local function compileLuarc(projectDir, rockspec, env)
 		-- also set 'runtime.plugin' in .luarc.json
 		luarc = luarc or object({})
 		print("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
-		luarc.runtime = object({ plugin = pluginDestination })
+		luarc["runtime.plugin"] = pluginDestination
 	end
 
 	local rockspecSettings = rockspec.build["settings"]
@@ -227,7 +227,7 @@ local function updateLuarcFiles(projectDir, luarc, env)
 	if luarcPaths then
 		for _, luarcPath in ipairs(luarcPaths) do
 			local oldLuarc = readLuarc(luarcPath)
-			extendNested(oldLuarc, luarc)
+			extend(true, oldLuarc, luarc)
 			writeLuarc(oldLuarc, luarcPath)
 		end
 	end
@@ -242,7 +242,7 @@ local function updateLuarcFiles(projectDir, luarc, env)
 
 		for _, vscPath in ipairs(vscPaths) do
 			local oldSettings = readLuarc(vscPath)
-			extendUnnested(oldSettings, newSettings)
+			extend(false, oldSettings, newSettings)
 			writeLuarc(oldSettings, vscPath)
 		end
 	end
@@ -252,7 +252,7 @@ local function updateLuarcFiles(projectDir, luarc, env)
 		local luarcPath = dir.path(projectDir, ".luarc.json")
 		if fs.exists(luarcPath) then
 			local oldLuarc = readLuarc(luarcPath)
-			extendNested(oldLuarc, luarc)
+			extend(true, oldLuarc, luarc)
 			writeLuarc(oldLuarc, luarcPath)
 			return
 		end
@@ -266,14 +266,15 @@ local function updateLuarcFiles(projectDir, luarc, env)
 			end
 
 			local oldSettings = readLuarc(vscPath)
-			extendUnnested(oldSettings, newSettings)
+			extend(false, oldSettings, newSettings)
 			writeLuarc(oldSettings, vscPath)
 			return
 		end
 
 		-- generate a new .luarc.json if neither of the defaults exist
 		print(".vscode/settings.json not found, generating new .luarc.json")
-		writeLuarc(luarc, luarcPath)
+
+		writeLuarc(extend(true, object({}), luarc), luarcPath)
 	end
 end
 
