@@ -102,7 +102,7 @@ describe("unnest", function()
 		}, unnested)
 	end)
 
-	it("merges unnested and nested keys with non-object values", function()
+	it("merges unnested and nested keys with array values", function()
 		local obj = object({
 			hover = object({
 				enable = array({ true }),
@@ -111,6 +111,17 @@ describe("unnest", function()
 		})
 		local unnested = unnest2(obj)
 		assert.are_same({ ["hover.enable"] = { true, false } }, unnested)
+	end)
+
+	it("merges unnested and nested keys with primitive values", function()
+		local obj = object({
+			hover = object({
+				enable = 5,
+			}),
+			["hover.enable"] = 4,
+		})
+		local unnested = unnest2(obj)
+		assert.are_same({ ["hover.enable"] = 4 }, unnested)
 	end)
 
 	it("works on entire .luarc.json", function()

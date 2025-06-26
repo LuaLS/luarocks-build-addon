@@ -229,7 +229,7 @@ local function unnestKey(t, k, unnested)
 		local newK = table.concat(path, ".")
 		local oldV = t[newK]
 		if oldV ~= nil then
-			extendSimple(v, oldV)
+			v = extendSimple(v, oldV)
 		end
 
 		unnested[newK] = v
