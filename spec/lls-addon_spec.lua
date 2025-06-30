@@ -12,7 +12,7 @@ end
 
 local log = require("luarocks.build.lls-addon.log")
 local llsAddon = require("luarocks.build.lls-addon")
-local jsonUtil = require("luarocks.build.lls-addon.json-util")
+local json = require("luarocks.build.lls-addon.json-util")
 
 ---@return luarocks.rockspec
 local function makeRockspec()
@@ -154,12 +154,12 @@ describe("#only lls-addon", function()
 					return pathArg == path(currentDir, "config.json")
 				end,
 			})
-			stub(jsonUtil, "readJsonFile", function(pathArg)
+			stub(json, "read", function(pathArg)
 				assert.are_equal(path(currentDir, "config.json"), pathArg)
-				return {
+				return json.object({
 					["Lua.some.example"] = 42,
 					["Lua.another.example"] = 100,
-				}
+				})
 			end)
 
 			local luarc = compileLuarc(installDir, nil)

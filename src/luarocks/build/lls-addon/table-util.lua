@@ -1,7 +1,4 @@
-local jsonUtil = require("luarocks.build.lls-addon.json-util")
-local object = jsonUtil.object
-local isJsonArray = jsonUtil.isArray
-local isJsonObject = jsonUtil.isObject
+local json = require("luarocks.build.lls-addon.json-util")
 
 local M = {}
 
@@ -59,7 +56,7 @@ M.contains = contains
 ---@param new unknown
 ---@return any
 local function extendNonObject(old, new)
-	if isJsonArray(old) and isJsonArray(new) then -- treat arrays like sets
+	if json.isArray(old) and json.isArray(new) then -- treat arrays like sets
 		---@cast old unknown[]
 		---@cast new unknown[]
 		for _, v in ipairs(new) do
@@ -77,7 +74,7 @@ end
 ---@param new unknown
 ---@return any
 local function extendSimple(old, new)
-	if isJsonObject(old) and isJsonObject(new) then
+	if json.isObject(old) and json.isObject(new) then
 		---@cast old { [string]: unknown }
 		---@cast new { [string]: unknown }
 		for k, v in pairs(new) do
@@ -98,7 +95,7 @@ local nestedPath = {
 	get = function(t, path)
 		local v = t
 		for k in string.gmatch(path, "[^%.]+") do
-			if isJsonObject(v) then
+			if json.isObject(v) then
 				v = v[k]
 			else
 				return nil
@@ -117,10 +114,10 @@ local nestedPath = {
 		for i = 1, #keys - 1 do
 			local k = keys[i]
 			local found = subT[k]
-			if isJsonObject(found) then
+			if json.isObject(found) then
 				subT = found
 			elseif v ~= nil then
-				local newT = object({})
+				local newT = json.object({})
 				subT, subT[k] = newT, newT
 			else
 				goto stopSettingKeys
@@ -172,7 +169,7 @@ local unnestedPath = {
 ---@param new unknown
 ---@return any -- the extended value
 local function extend(nested, old, new)
-	if isJsonObject(old) and isJsonObject(new) then
+	if json.isObject(old) and json.isObject(new) then
 		---@cast old { [string]: unknown }
 		---@cast new { [string]: unknown }
 		local primary ---@type lls-addon.path-getter
@@ -210,7 +207,7 @@ M.extend = extend
 ---@param unnested { [string]: any }
 local function unnestKey(t, k, unnested)
 	local subT = t[k]
-	if not isJsonObject(subT) then
+	if not json.isObject(subT) then
 		unnested[k] = extendSimple(unnested[k], subT)
 		return
 	end
@@ -243,7 +240,7 @@ M.unnestKey = unnestKey
 ---@param t { [string]: any }
 ---@return { [string]: any } unnested
 function M.unnest2(t)
-	local unnested = object({}) ---@type { [string]: any }
+	local unnested = json.object({}) ---@type { [string]: any }
 	local keys = {}
 	for k in pairs(t) do
 		table.insert(keys, k)
