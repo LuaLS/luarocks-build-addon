@@ -139,7 +139,7 @@ describe("#only lls-addon", function()
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
 		end)
 
-		pending("works when given a config.json", function()
+		it("works when given a config.json", function()
 			mock(log, --[[stubbing:]] true)
 			local installDir = path("E:", "path", "to", "rock")
 			local currentDir = path("E:", "path", "to", "types")
@@ -157,8 +157,10 @@ describe("#only lls-addon", function()
 			stub(json, "read", function(pathArg)
 				assert.are_equal(path(currentDir, "config.json"), pathArg)
 				return json.object({
-					["Lua.some.example"] = 42,
-					["Lua.another.example"] = 100,
+					settings = json.object({
+						["Lua.some.example"] = 42,
+						["Lua.another.example"] = 100,
+					}),
 				})
 			end)
 
