@@ -70,7 +70,7 @@ describe("#only lls-addon", function()
 		end)
 
 		it("works when given a library", function()
-			mock(log, --[[stubbing:]] true)
+			mock(log, --[[stub:]] true)
 			local installDir = path("E:", "path", "to", "rock")
 			local currentDir = path("E:", "path", "to", "types")
 
@@ -95,7 +95,7 @@ describe("#only lls-addon", function()
 		end)
 
 		it("works when given a plugin", function()
-			mock(log, --[[stubbing:]] true)
+			mock(log, --[[stub:]] true)
 			local installDir = path("E:", "path", "to", "rock")
 			local currentDir = path("E:", "path", "to", "types")
 
@@ -117,7 +117,7 @@ describe("#only lls-addon", function()
 		end)
 
 		it("works when given rockspec settings", function()
-			mock(log, --[[stubbing:]] true)
+			mock(log, --[[stub:]] true)
 			local installDir = path("E:", "path", "to", "rock")
 			local currentDir = path("E:", "path", "to", "types")
 
@@ -140,7 +140,7 @@ describe("#only lls-addon", function()
 		end)
 
 		it("works when given a config.json", function()
-			mock(log, --[[stubbing:]] true)
+			mock(log, --[[stub:]] true)
 			local installDir = path("E:", "path", "to", "rock")
 			local currentDir = path("E:", "path", "to", "types")
 
