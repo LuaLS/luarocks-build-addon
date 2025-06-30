@@ -3,8 +3,7 @@
 
 local lfs = require("lfs") ---@type LuaFileSystem
 
-local jsonUtil = require("luarocks.build.lls-addon.json-util")
-local readJsonFile = jsonUtil.readJsonFile
+local json = require("luarocks.build.lls-addon.json-util")
 
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
@@ -149,7 +148,7 @@ describe("#slow behavior", function()
 		"works when there is a library included",
 		withProject("with-lib", function()
 			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
 			}, luarc)
@@ -160,7 +159,7 @@ describe("#slow behavior", function()
 		"works when there is a config included",
 		withProject("with-config", function()
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				example = true,
 			}, luarc)
@@ -171,7 +170,7 @@ describe("#slow behavior", function()
 		"works when there is a plugin included",
 		withProject("with-plugin", function()
 			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
 			}, luarc)
@@ -183,7 +182,7 @@ describe("#slow behavior", function()
 		withProject("with-lib-config", function()
 			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
 				example = true,
@@ -196,7 +195,7 @@ describe("#slow behavior", function()
 		withProject("with-lib-plugin", function()
 			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
 				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
@@ -209,7 +208,7 @@ describe("#slow behavior", function()
 		withProject("with-config-plugin", function()
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				example = true,
 				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
@@ -223,7 +222,7 @@ describe("#slow behavior", function()
 			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
 			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
 				example = true,
@@ -236,7 +235,7 @@ describe("#slow behavior", function()
 		"overwrites existing .luarc.json",
 		withProject("with-config-luarc", function()
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				completion = {
 					autoRequire = false,
@@ -252,7 +251,7 @@ describe("#slow behavior", function()
 		withProject("with-config-vsc-settings", function()
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
 			assert.is_false(fileExists(".luarc.json"))
-			local settings = readJsonFile(path(".vscode", "settings.json"))
+			local settings = json.read(path(".vscode", "settings.json"))
 			assert.are_same({
 				["Lua.completion.autoRequire"] = false,
 				["Lua.hover.enable"] = false,
@@ -264,12 +263,12 @@ describe("#slow behavior", function()
 		"overwrites .luarc.json and not .vscode/settings.json when former exists",
 		withProject("with-config-luarc-vsc-settings", function()
 			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				completion = { autoRequire = false },
 				["hover.enable"] = false,
 			}, luarc)
-			local settings = readJsonFile(path(".vscode", "settings.json"))
+			local settings = json.read(path(".vscode", "settings.json"))
 			assert.are_same({
 				["Lua.completion.autoRequire"] = true,
 				["Lua.hover.enable"] = true,
@@ -280,7 +279,7 @@ describe("#slow behavior", function()
 	it(
 		"works when there is rockspec.build.settings",
 		withProject("with-rockspec-settings", function()
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				hover = { enable = true },
 			}, luarc)
@@ -290,7 +289,7 @@ describe("#slow behavior", function()
 	it(
 		"overwrites .luarc.json from rockspec.build.settings",
 		withProject("with-rockspec-settings-luarc", function()
-			local luarc = readJsonFile(".luarc.json")
+			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				completion = {
 					autoRequire = true,

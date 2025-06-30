@@ -2,15 +2,8 @@ local fs = require("luarocks.fs")
 local dir = require("luarocks.dir")
 local path = require("luarocks.path")
 local cfg = require("luarocks.core.cfg")
-local json = require("luarocks.vendor.dkjson")
 
-local jsonUtil = require("luarocks.build.lls-addon.json-util")
-local array = jsonUtil.array
-local object = jsonUtil.object
-local isJsonArray = jsonUtil.isJsonArray
-local isJsonObject = jsonUtil.isJsonObject
-local readJsonFile = jsonUtil.readJsonFile
-local coerceJson = jsonUtil.coerceJson
+local json = require("luarocks.build.lls-addon.json-util")
 
 local tableUtil = require("luarocks.build.lls-addon.table-util")
 local extend = tableUtil.extend
@@ -39,13 +32,13 @@ local function readOrCreateLuarc(luarcPath)
 	local luarc ---@type { [string]: any }
 	if fs.exists(luarcPath) then
 		log.info("Found " .. luarcPath)
-		luarc = readJsonFile(luarcPath) --[[@as { [string]: any }]]
-		if not isJsonObject(luarc) then
+		luarc = json.read(luarcPath) --[[@as { [string]: any }]]
+		if not json.isObject(luarc) then
 			error("[BuildError]: Expected root of '.luarc.json' to be an object")
 		end
 	else
 		log.info(luarcPath .. " not found, generating a new one")
-		luarc = object({})
+		luarc = json.object({})
 	end
 
 	return luarc
@@ -55,12 +48,12 @@ end
 ---@param keyorder string[]
 ---@param obj { [string]: any }
 local function getRecursiveKeys(keyorder, obj)
-	if isJsonObject(obj) then
+	if json.isObject(obj) then
 		for k, v in pairs(obj) do
 			table.insert(keyorder, k)
 			getRecursiveKeys(keyorder, v)
 		end
-	elseif isJsonArray(obj) then
+	elseif json.isArray(obj) then
 		for _, v in ipairs(obj) do
 			getRecursiveKeys(keyorder, v)
 		end
@@ -127,23 +120,23 @@ end
 ---@param luarc { [string]: any }
 ---@return { [string]: any } luarc
 local function copyConfigSettings(sourcePath, luarc)
-	local config = readJsonFile(sourcePath)
+	local config = json.read(sourcePath)
 
-	if not isJsonObject(config) then
+	if not json.isObject(config) then
 		log.warn("Root of 'config.json' is not an object, skipping")
 		return luarc
 	end
 	---@cast config { [string]: any }
 
 	local settings = config.settings
-	if not isJsonObject(settings) then
+	if not json.isObject(settings) then
 		log.warn("key 'settings' of " .. sourcePath .. " is not an object, skipping")
 		return luarc
 	end
 	---@cast settings { [string]: any }
 
 	log.info("Merging 'settings' object into .luarc.json")
-	local settingsNoPrefix = object({})
+	local settingsNoPrefix = json.object({})
 	for k, v in pairs(settings) do
 		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
 	end
@@ -155,8 +148,8 @@ end
 ---@param luarc { [string]: any }
 ---@return { [string]: any } luarc
 local function copyBuildSettings(settings, luarc)
-	settings = coerceJson(settings)
-	if not isJsonObject(settings) then
+	settings = json.coerce(settings)
+	if not json.isObject(settings) then
 		error("'rockspec.build.settings' is not an object.")
 	end
 
@@ -192,9 +185,9 @@ local function compileLuarc(installDir, rockspecSettings)
 		copyDirectory(librarySource, libraryDestination)
 
 		-- also insert the library/ directory into 'workspace.library'
-		luarc = luarc or object({})
+		luarc = luarc or json.object({})
 		log.info("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
-		luarc["workspace.library"] = array({ libraryDestination })
+		luarc["workspace.library"] = json.array({ libraryDestination })
 	end
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
@@ -203,20 +196,20 @@ local function compileLuarc(installDir, rockspecSettings)
 		copyFile(pluginSource, pluginDestination)
 
 		-- also set 'runtime.plugin' in .luarc.json
-		luarc = luarc or object({})
+		luarc = luarc or json.object({})
 		log.info("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
 		luarc["runtime.plugin"] = pluginDestination
 	end
 
 	local configSource = dir.path(fs.current_dir(), "config.json")
 	if rockspecSettings ~= nil then
-		luarc = luarc or object({})
+		luarc = luarc or json.object({})
 		luarc = copyBuildSettings(rockspecSettings, luarc)
 	elseif fs.exists(configSource) then
 		copyFile(configSource, dir.path(installDir, "config.json"))
 
 		-- also merge 'settings' from 'config.json' into .luarc.json
-		luarc = luarc or object({})
+		luarc = luarc or json.object({})
 		luarc = copyConfigSettings(configSource, luarc)
 	end
 
@@ -289,7 +282,7 @@ local function updateLuarcFiles(luarcFiles, luarc)
 		log.info(string.format("writing to %s: %s", type, path))
 		if type == "vscode settings" then
 			if not newSettings then
-				newSettings = object({})
+				newSettings = json.object({})
 				for k, v in pairs(luarc) do
 					newSettings["Lua." .. k] = v
 				end

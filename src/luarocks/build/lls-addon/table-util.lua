@@ -1,7 +1,7 @@
 local jsonUtil = require("luarocks.build.lls-addon.json-util")
 local object = jsonUtil.object
-local isJsonArray = jsonUtil.isJsonArray
-local isJsonObject = jsonUtil.isJsonObject
+local isJsonArray = jsonUtil.isArray
+local isJsonObject = jsonUtil.isObject
 
 local M = {}
 

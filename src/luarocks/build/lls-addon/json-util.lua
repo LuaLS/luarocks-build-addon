@@ -1,6 +1,9 @@
 local json = require("luarocks.vendor.dkjson")
 
-local M = {}
+local M = {
+	encode = json.encode,
+	decode = json.decode,
+}
 
 local function assertContext(context, ...)
 	local s, msg = ...
@@ -31,7 +34,7 @@ M.object = object
 
 ---@param value any
 ---@return any t
-local function coerceJson(value)
+local function coerce(value)
 	if type(value) ~= "table" then
 		return value
 	end
@@ -39,33 +42,33 @@ local function coerceJson(value)
 	if #value > 0 then
 		array(value)
 		for _, v in ipairs(value) do
-			coerceJson(v)
+			coerce(v)
 		end
 	else
 		object(value)
 		for _, v in pairs(value) do
-			coerceJson(v)
+			coerce(v)
 		end
 	end
 	return value
 end
-M.coerceJson = coerceJson
+M.coerce = coerce
 
 ---@param value any
 ---@return boolean
-function M.isJsonObject(value)
+function M.isObject(value)
 	return type(value) == "table" and getmetatable(value) == objectMt
 end
 
 ---@param value any
 ---@return boolean
-function M.isJsonArray(value)
+function M.isArray(value)
 	return type(value) == "table" and getmetatable(value) == arrayMt
 end
 
 ---@param sourcePath string
 ---@return any
-function M.readJsonFile(sourcePath)
+function M.read(sourcePath)
 	local file <close> = assertContext("when opening " .. sourcePath, io.open(sourcePath))
 	local contents = file:read("a")
 	return json.decode(contents, nil, json.null, objectMt, arrayMt)
