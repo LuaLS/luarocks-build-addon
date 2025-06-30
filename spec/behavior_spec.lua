@@ -146,7 +146,7 @@ describe("#slow behavior", function()
 	)
 
 	it(
-		"works when there is a library included #only",
+		"works when there is a library included",
 		withProject("with-lib", function()
 			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
 			local luarc = readJsonFile(".luarc.json")

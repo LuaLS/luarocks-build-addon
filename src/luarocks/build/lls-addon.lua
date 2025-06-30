@@ -16,6 +16,8 @@ local tableUtil = require("luarocks.build.lls-addon.table-util")
 local extend = tableUtil.extend
 local unnest2 = tableUtil.unnest2
 
+local log = require("luarocks.build.lls-addon.log")
+
 local M = {}
 
 local DIR_SEP = string.sub(package.config, 1, 1)
@@ -33,16 +35,16 @@ end
 ---reads .luarc.json into a table, or returns a new one if it doesn't exist
 ---@param luarcPath string
 ---@return { [string]: any } luarc
-local function readLuarc(luarcPath)
+local function readOrCreateLuarc(luarcPath)
 	local luarc ---@type { [string]: any }
 	if fs.exists(luarcPath) then
-		print("Found " .. luarcPath)
+		log.info("Found " .. luarcPath)
 		luarc = readJsonFile(luarcPath) --[[@as { [string]: any }]]
 		if not isJsonObject(luarc) then
 			error("[BuildError]: Expected root of '.luarc.json' to be an object")
 		end
 	else
-		print(luarcPath .. " not found, generating a new one")
+		log.info(luarcPath .. " not found, generating a new one")
 		luarc = object({})
 	end
 
@@ -66,9 +68,9 @@ local function getRecursiveKeys(keyorder, obj)
 end
 
 ---writes the given table into .luarc.json
----@param luarc { [string]: any }
 ---@param luarcPath string
-local function writeLuarc(luarc, luarcPath)
+---@param luarc { [string]: any }
+local function writeLuarc(luarcPath, luarc)
 	local keyorder = {} ---@type string[]
 	getRecursiveKeys(keyorder, luarc)
 	table.sort(keyorder)
@@ -81,7 +83,7 @@ end
 local function getProjectDir()
 	local projectDir = cfg.project_dir --[[@as string]]
 	if not projectDir then
-		print("project directory not found, defaulting to working directory")
+		log.info("project directory not found, defaulting to working directory")
 		assertContext("when changing to working directory", fs.change_dir("."))
 		projectDir = fs.current_dir()
 		assert(fs.pop_dir(), "unable to find source directory")
@@ -89,7 +91,22 @@ local function getProjectDir()
 	return projectDir
 end
 
--- TODO: getInstallDir(projectDir)
+---@param projectDir string
+---@param rockspec luarocks.rockspec
+---@param env { [string]: string? }
+---@return string
+local function getInstallDir(projectDir, rockspec, env)
+	local installDir = path.install_dir(rockspec.package, rockspec.version)
+	if not env.ABSPATH and installDir:sub(1, #projectDir) == projectDir then
+		log.info("Making install directory relative to " .. projectDir)
+		installDir = installDir:sub(#projectDir + 1)
+		if installDir:sub(1, 1) == DIR_SEP then
+			installDir = installDir:sub(2)
+		end
+	end
+
+	return installDir
+end
 
 ---@param pathsString string?
 ---@return string[]? paths
@@ -113,19 +130,19 @@ local function copyConfigSettings(sourcePath, luarc)
 	local config = readJsonFile(sourcePath)
 
 	if not isJsonObject(config) then
-		print("Root of 'config.json' is not an object, skipping")
+		log.warn("Root of 'config.json' is not an object, skipping")
 		return luarc
 	end
 	---@cast config { [string]: any }
 
 	local settings = config.settings
 	if not isJsonObject(settings) then
-		print("key 'settings' of " .. sourcePath .. " is not an object, skipping")
+		log.warn("key 'settings' of " .. sourcePath .. " is not an object, skipping")
 		return luarc
 	end
 	---@cast settings { [string]: any }
 
-	print("Merging 'settings' object into .luarc.json")
+	log.info("Merging 'settings' object into .luarc.json")
 	local settingsNoPrefix = object({})
 	for k, v in pairs(settings) do
 		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
@@ -143,40 +160,30 @@ local function copyBuildSettings(settings, luarc)
 		error("'rockspec.build.settings' is not an object.")
 	end
 
-	print("Merging 'rockspec.build.settings' into .luarc.json")
+	log.info("Merging 'rockspec.build.settings' into .luarc.json")
 	return extend(false, luarc, unnest2(settings))
 end
 
 ---@param source string
 ---@param destination string
 local function copyFile(source, destination)
-	print("Installing " .. source .. " to " .. destination)
+	log.info("Installing " .. source .. " to " .. destination)
 	assertContext("when copying into" .. destination, fs.copy(source, destination))
 end
 
 ---@param source string
 ---@param destination string
 local function copyDirectory(source, destination)
-	print("Installing " .. source .. " to " .. destination)
+	log.info("Installing " .. source .. " to " .. destination)
 
 	assertContext("when creating " .. destination, fs.make_dir(destination))
 	assertContext("when copying files into " .. destination, fs.copy_contents(source, destination))
 end
 
----@param projectDir string
----@param rockspec luarocks.rockspec
----@param env { [string]: string? }
+---@param installDir string
+---@param rockspecSettings unknown
 ---@return { [string]: any }? luarc
-local function compileLuarc(projectDir, rockspec, env)
-	local installDir = path.install_dir(rockspec.package, rockspec.version)
-	if not env.ABSPATH and installDir:sub(1, #projectDir) == projectDir then
-		print("Making install directory relative to " .. projectDir)
-		installDir = installDir:sub(#projectDir + 1)
-		if installDir:sub(1, 1) == DIR_SEP then
-			installDir = installDir:sub(2)
-		end
-	end
-
+local function compileLuarc(installDir, rockspecSettings)
 	local luarc ---@type { [string]: any }
 
 	local librarySource = dir.path(fs.current_dir(), "library")
@@ -186,7 +193,7 @@ local function compileLuarc(projectDir, rockspec, env)
 
 		-- also insert the library/ directory into 'workspace.library'
 		luarc = luarc or object({})
-		print("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
+		log.info("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
 		luarc["workspace.library"] = array({ libraryDestination })
 	end
 
@@ -197,11 +204,10 @@ local function compileLuarc(projectDir, rockspec, env)
 
 		-- also set 'runtime.plugin' in .luarc.json
 		luarc = luarc or object({})
-		print("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
+		log.info("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
 		luarc["runtime.plugin"] = pluginDestination
 	end
 
-	local rockspecSettings = rockspec.build["settings"]
 	local configSource = dir.path(fs.current_dir(), "config.json")
 	if rockspecSettings ~= nil then
 		luarc = luarc or object({})
@@ -216,67 +222,92 @@ local function compileLuarc(projectDir, rockspec, env)
 
 	return luarc
 end
+M.compileLuarc = compileLuarc
+
+---@class lls-addon.luarc-path
+---@field type "luarc" | "vscode settings"
+---@field path string
 
 ---@param projectDir string
----@param luarc { [string]: any }
 ---@param env { [string]: string? }
-local function updateLuarcFiles(projectDir, luarc, env)
-	print("Looking for paths in LLSADDON_LUARCPATH")
+---@return lls-addon.luarc-path[]
+local function findLuarcFiles(projectDir, env)
+	local luarcFilePaths = {} ---@type lls-addon.luarc-path[]
+
 	local luarcPaths = parsePathList(env.LUARCPATH)
-
 	if luarcPaths then
+		log.info("LLSADDON_LUARCPATH is defined")
 		for _, luarcPath in ipairs(luarcPaths) do
-			local oldLuarc = readLuarc(luarcPath)
-			extend(true, oldLuarc, luarc)
-			writeLuarc(oldLuarc, luarcPath)
+			table.insert(luarcFilePaths, {
+				type = "luarc",
+				path = luarcPath,
+			} --[[@as lls-addon.luarc-path]])
 		end
 	end
 
-	print("Looking for paths in LLSADDON_VSCSETTINGSPATH")
 	local vscPaths = parsePathList(env.VSCSETTINGSPATH)
-	if vscPaths and #vscPaths > 0 then
-		local newSettings = object({})
-		for k, v in pairs(unnest2(luarc)) do
-			newSettings["Lua." .. k] = v
-		end
-
+	if vscPaths then
+		log.info("LLSADDON_VSCSETTINGSPATH is defined")
 		for _, vscPath in ipairs(vscPaths) do
-			local oldSettings = readLuarc(vscPath)
-			extend(false, oldSettings, newSettings)
-			writeLuarc(oldSettings, vscPath)
+			table.insert(luarcFilePaths, {
+				type = "vscode settings",
+				path = vscPath,
+			} --[[@as lls-addon.luarc-path]])
 		end
 	end
 
-	if not luarcPaths and not vscPaths then
-		print("No paths found, looking for .luarc.json in project directory")
-		local luarcPath = dir.path(projectDir, ".luarc.json")
-		if fs.exists(luarcPath) then
-			local oldLuarc = readLuarc(luarcPath)
-			extend(true, oldLuarc, luarc)
-			writeLuarc(oldLuarc, luarcPath)
-			return
-		end
+	if luarcPaths or vscPaths then
+		return luarcFilePaths
+	end
 
-		print(".luarc.json not found, looking for .vscode/settings.json in project directory")
-		local vscPath = dir.path(projectDir, ".vscode", "settings.json")
-		if fs.exists(vscPath) then
-			local newSettings = object({})
-			for k, v in pairs(unnest2(luarc)) do
-				newSettings["Lua." .. k] = v
+	local luarcPath = dir.path(projectDir, ".luarc.json")
+	if fs.exists(luarcPath) then
+		log.info("found .luarc.json in project directory")
+		return { { type = "luarc", path = luarcPath } }
+	end
+
+	local vscPath = dir.path(projectDir, ".vscode", "settings.json")
+	if fs.exists(vscPath) then
+		log.info("found .vscode/settings.json in project directory")
+		return { { type = "vscode settings", path = vscPath } }
+	end
+
+	-- generate a new .luarc.json if neither of the defaults exist
+	log.info("generating new .luarc.json")
+	return { { type = "luarc", path = luarcPath } }
+end
+M.findLuarcFiles = findLuarcFiles
+
+---@param luarcFiles lls-addon.luarc-path[]
+---@param luarc { [string]: any }
+local function updateLuarcFiles(luarcFiles, luarc)
+	local newSettings
+
+	for _, luarcFile in ipairs(luarcFiles) do
+		local type = luarcFile.type
+		local path = luarcFile.path
+		log.info(string.format("writing to %s: %s", type, path))
+		if type == "vscode settings" then
+			if not newSettings then
+				newSettings = object({})
+				for k, v in pairs(luarc) do
+					newSettings["Lua." .. k] = v
+				end
 			end
 
-			local oldSettings = readLuarc(vscPath)
+			local oldSettings = readOrCreateLuarc(path)
 			extend(false, oldSettings, newSettings)
-			writeLuarc(oldSettings, vscPath)
-			return
+			writeLuarc(path, oldSettings)
+		elseif type == "luarc" then
+			local oldLuarc = readOrCreateLuarc(path)
+			extend(true, oldLuarc, luarc)
+			writeLuarc(path, oldLuarc)
+		else
+			error(string.format("unknown luarc path type '%s'", type))
 		end
-
-		-- generate a new .luarc.json if neither of the defaults exist
-		print(".vscode/settings.json not found, generating new .luarc.json")
-
-		writeLuarc(extend(true, object({}), luarc), luarcPath)
 	end
 end
+M.updateLuarcFiles = updateLuarcFiles
 
 ---does two things:
 ---- copies the library/, config.json and plugin.lua into the rock's install
@@ -285,16 +316,21 @@ end
 ---  references to the above copied files
 ---@param rockspec luarocks.rockspec
 ---@param env { [string]: string? }
-function M.addFiles(rockspec, env)
-	print("Building addon " .. rockspec.package .. " @ " .. rockspec.version)
+local function buildLuarc(rockspec, env)
+	log.info("Building addon " .. rockspec.package .. " @ " .. rockspec.version)
 
 	local projectDir = getProjectDir()
-	local luarc = compileLuarc(projectDir, rockspec, env)
+	local installDir = getInstallDir(projectDir, rockspec, env)
+	local luarc = compileLuarc(installDir, rockspec.build["settings"])
 
 	if luarc then
-		updateLuarcFiles(projectDir, luarc, env)
+		local luarcFiles = findLuarcFiles(projectDir, env)
+		updateLuarcFiles(luarcFiles, luarc)
+	else
+		log.warn("addon has no features; no files written!")
 	end
 end
+M.buildLuarc = buildLuarc
 
 ---@param rockspec luarocks.rockspec
 ---@return boolean, string?
@@ -307,7 +343,7 @@ function M.run(rockspec)
 		VSCSETTINGSPATH = os.getenv("LLSADDON_VSCSETTINGSPATH"),
 	}
 
-	local s, msg = pcall(M.addFiles, rockspec, env)
+	local s, msg = pcall(buildLuarc, rockspec, env)
 	if not s then
 		---@cast msg string
 		local match = msg:match("%[BuildError%]%: (.*)$")

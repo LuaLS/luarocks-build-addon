@@ -1,9 +1,4 @@
-local json
-if _TEST then
-	json = require("dkjson")
-else
-	json = require("luarocks.vendor.dkjson")
-end
+local json = require("luarocks.vendor.dkjson")
 
 local M = {}
 
