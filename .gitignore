@@ -4,3 +4,4 @@
 /.luarocks
 /luarocks
 /lua
+.vscode/settings.json
