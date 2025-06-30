@@ -11,10 +11,8 @@ local object = jsonUtil.object
 
 describe("extend", function()
 	describe("array", function()
-		for _, prefer in ipairs({ "nested", "unnested" }) do
-			describe("prefers" .. prefer, function()
-				local nested = prefer == "nested"
-
+		for _, nested in ipairs({ true, false }) do
+			describe("prefers" .. (nested and "nested" or "unnested"), function()
 				it("gets replaced if it doesn't have an arrayMt", function()
 					local arr = { "some" }
 					local new = array({ "new" })
