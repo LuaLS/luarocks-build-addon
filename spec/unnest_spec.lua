@@ -1,16 +1,16 @@
 ---@diagnostic disable-next-line: unknown-cast-variable
 ---@cast assert luassert
 
+local json = require("luarocks.build.lls-addon.json-util")
+local tableUtil = require("luarocks.build.lls-addon.table-util")
+
+local unnest2 = tableUtil.unnest2
+local unnestKey = tableUtil.unnestKey
+
 local SEP = package.config:sub(1, 1)
 local function path(...)
 	return table.concat({ ... }, SEP)
 end
-
-local json = require("luarocks.build.lls-addon.json-util")
-
-local tableUtil = require("luarocks.build.lls-addon.table-util")
-local unnest2 = tableUtil.unnest2
-local unnestKey = tableUtil.unnestKey
 
 describe("unnestKey", function()
 	it("acts the same regardless of merge order", function()

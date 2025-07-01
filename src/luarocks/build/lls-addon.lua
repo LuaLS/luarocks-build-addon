@@ -1,15 +1,14 @@
-local fs = require("luarocks.fs")
-local dir = require("luarocks.dir")
-local path = require("luarocks.path")
 local cfg = require("luarocks.core.cfg")
+local dir = require("luarocks.dir")
+local fs = require("luarocks.fs")
+local path = require("luarocks.path")
 
 local json = require("luarocks.build.lls-addon.json-util")
-
+local log = require("luarocks.build.lls-addon.log")
 local tableUtil = require("luarocks.build.lls-addon.table-util")
+
 local extend = tableUtil.extend
 local unnest2 = tableUtil.unnest2
-
-local log = require("luarocks.build.lls-addon.log")
 
 local M = {}
 

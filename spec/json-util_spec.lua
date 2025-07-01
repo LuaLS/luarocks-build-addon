@@ -1,16 +1,13 @@
 ---@diagnostic disable-next-line: unknown-cast-variable
 ---@cast assert luassert
 
-local json = require("dkjson")
-local jsonUtil = require("luarocks.build.lls-addon.json-util")
-local object = jsonUtil.object
-local array = jsonUtil.array
+local json = require("luarocks.build.lls-addon.json-util")
 
 describe("json-util", function()
 	it("turns empty objects into object strings", function()
-		assert.are_equal("{}", json.encode(object({})))
+		assert.are_equal("{}", json.encode(json.object({})))
 	end)
 	it("turns empty arrays into array strings", function()
-		assert.are_equal("[]", json.encode(array({})))
+		assert.are_equal("[]", json.encode(json.array({})))
 	end)
 end)

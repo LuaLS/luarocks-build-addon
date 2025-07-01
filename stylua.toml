@@ -1,1 +1,4 @@
 syntax = "Lua54"
+indent_type = "Tabs"
+indent_width = 4
+sort_requires.enabled = true

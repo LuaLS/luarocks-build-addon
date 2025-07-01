@@ -1,18 +1,18 @@
 ---@diagnostic disable-next-line: unknown-cast-variable
 ---@cast assert luassert
 
+local cfg = require("luarocks.core.cfg")
 local fs = require("luarocks.fs")
 local rockspecs = require("luarocks.rockspecs")
-local cfg = require("luarocks.core.cfg")
+
+local json = require("luarocks.build.lls-addon.json-util")
+local llsAddon = require("luarocks.build.lls-addon")
+local log = require("luarocks.build.lls-addon.log")
 
 local SEP = package.config:sub(1, 1)
 local function path(...)
 	return table.concat({ ... }, SEP)
 end
-
-local log = require("luarocks.build.lls-addon.log")
-local llsAddon = require("luarocks.build.lls-addon")
-local json = require("luarocks.build.lls-addon.json-util")
 
 ---@return luarocks.rockspec
 local function makeRockspec()
