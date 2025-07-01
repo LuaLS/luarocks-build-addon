@@ -1,0 +1,8 @@
+{
+	"recommendations": [
+		"esbenp.prettier-vscode",
+		"sumneko.lua",
+		"johnnymorganz.stylua",
+		"streetsidesoftware.code-spell-checker"
+	]
+}
