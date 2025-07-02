@@ -216,24 +216,24 @@ local function compileLuarc(installDir, rockspecSettings)
 end
 M.compileLuarc = compileLuarc
 
----@class lls-addon.luarc-path
+---@class lls-addon.luarc-file
 ---@field type "luarc" | "vscode settings"
 ---@field path string
 
 ---@param projectDir string
 ---@param env { [string]: string? }
----@return lls-addon.luarc-path[]
+---@return lls-addon.luarc-file[]
 local function findLuarcFiles(projectDir, env)
-	local luarcFilePaths = {} ---@type lls-addon.luarc-path[]
+	local luarcFiles = {} ---@type lls-addon.luarc-file[]
 
 	local luarcPaths = parsePathList(env.LUARCPATH)
 	if luarcPaths then
 		log.info("LLSADDON_LUARCPATH is defined")
 		for _, luarcPath in ipairs(luarcPaths) do
-			table.insert(luarcFilePaths, {
+			table.insert(luarcFiles, {
 				type = "luarc",
 				path = luarcPath,
-			} --[[@as lls-addon.luarc-path]])
+			} --[[@as lls-addon.luarc-file]])
 		end
 	end
 
@@ -241,15 +241,15 @@ local function findLuarcFiles(projectDir, env)
 	if vscPaths then
 		log.info("LLSADDON_VSCSETTINGSPATH is defined")
 		for _, vscPath in ipairs(vscPaths) do
-			table.insert(luarcFilePaths, {
+			table.insert(luarcFiles, {
 				type = "vscode settings",
 				path = vscPath,
-			} --[[@as lls-addon.luarc-path]])
+			} --[[@as lls-addon.luarc-file]])
 		end
 	end
 
 	if luarcPaths or vscPaths then
-		return luarcFilePaths
+		return luarcFiles
 	end
 
 	local luarcPath = dir.path(projectDir, ".luarc.json")
@@ -270,7 +270,7 @@ local function findLuarcFiles(projectDir, env)
 end
 M.findLuarcFiles = findLuarcFiles
 
----@param luarcFiles lls-addon.luarc-path[]
+---@param luarcFiles lls-addon.luarc-file[]
 ---@param luarc { [string]: any }
 local function updateLuarcFiles(luarcFiles, luarc)
 	local newSettings
