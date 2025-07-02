@@ -58,15 +58,17 @@ M.coerce = coerce
 
 ---@param value any
 ---@return boolean
-function M.isObject(value)
+local function isObject(value)
 	return type(value) == "table" and getmetatable(value) == objectMt
 end
+M.isObject = isObject
 
 ---@param value any
 ---@return boolean
-function M.isArray(value)
+local function isArray(value)
 	return type(value) == "table" and getmetatable(value) == arrayMt
 end
+M.isArray = isArray
 
 ---@param sourcePath string
 ---@return any
@@ -80,12 +82,12 @@ end
 ---@param keyorder string[]
 ---@param obj { [string]: any }
 local function getRecursiveKeys(keyorder, obj)
-	if json.isObject(obj) then
+	if isObject(obj) then
 		for k, v in pairs(obj) do
 			table.insert(keyorder, k)
 			getRecursiveKeys(keyorder, v)
 		end
-	elseif json.isArray(obj) then
+	elseif isArray(obj) then
 		for _, v in ipairs(obj) do
 			getRecursiveKeys(keyorder, v)
 		end
