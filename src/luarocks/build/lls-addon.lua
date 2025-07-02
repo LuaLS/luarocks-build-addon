@@ -17,11 +17,13 @@ local PATH_SEP = string.sub(package.config, 3, 3)
 local PATH_SEP_PATTERN = "[^%" .. PATH_SEP .. "]+"
 
 local function assertContext(context, ...)
+	-- luacov: disable
 	local s, msg = ...
 	if not s then
 		error(context .. ": " .. msg)
 	end
 	return ...
+	-- luacov: enable
 end
 
 ---reads .luarc.json into a table, or returns a new one if it doesn't exist

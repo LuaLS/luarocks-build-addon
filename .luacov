@@ -1,0 +1,9 @@
+return {
+	exclude = {
+		"lua_modules%/.+$",
+		"scripts%/.+$",
+	},
+	reportfile = "luacov.report.html",
+	runreport = true,
+	deletestats = true,
+}

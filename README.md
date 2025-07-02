@@ -5,10 +5,10 @@
 > [!NOTE]
 > The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system.
 
-- `LLSADDON_LUARCPATH="$path1;$path2;..."`: a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
-- `LLSADDON_VSCSETTINGSPATH="$path1;$path2;..."`: a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon.
-   - If at least one of the above variables is set to `""` and the other is unset, no config files will be modified by the build process.
-- `LLSADDON_ABSPATH`: If defined, indicates any paths added to the config file should be absolute paths, rather than relative ones. Unset the variable to use relative paths.
+-   `LLSADDON_LUARCPATH="$path1;$path2;..."`: a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
+-   `LLSADDON_VSCSETTINGSPATH="$path1;$path2;..."`: a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon.
+    -   If at least one of the above variables is set to `""` and the other is unset, no config files will be modified by the build process.
+-   `LLSADDON_ABSPATH`: If defined, indicates any paths added to the config file should be absolute paths, rather than relative ones. Unset the variable to use relative paths.
 
 ## Building
 
@@ -62,8 +62,11 @@ You can try adding plugins or other settings to see if everything is working as 
 ```sh
 # the build fails if this is not set to 5.4, I don't know why
 echo "return 5.4" > .luarocks/default-lua-version.lua
-luarocks --local --lua-version=5.4 make
 luarocks test
+
+# report coverage
+luarocks test -- -c
+./lua_modules/bin/luacov -r html && ./luacov.report.html
 ```
 
 ---

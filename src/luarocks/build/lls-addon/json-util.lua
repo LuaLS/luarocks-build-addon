@@ -6,11 +6,13 @@ local M = {
 }
 
 local function assertContext(context, ...)
+	-- luacov: disable
 	local s, msg = ...
 	if not s then
 		error(context .. ": " .. msg)
 	end
 	return ...
+	-- luacov: enable
 end
 
 local arrayMt = { __jsontype = "array" }

@@ -4,3 +4,6 @@
 /.luarocks
 /luarocks
 /lua
+luacov.stats.out
+luacov.report.out
+luacov.report.html
