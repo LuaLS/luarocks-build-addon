@@ -4,6 +4,11 @@ local tableUtil = require("luarocks.build.lls-addon.table-util")
 local extend = tableUtil.extend
 local unnest2 = tableUtil.unnest2
 
+local SEP = package.config:sub(1, 1)
+local function path(...)
+	return table.concat({ ... }, SEP)
+end
+
 describe("extend", function()
 	describe("array", function()
 		for _, nested in ipairs({ true, false }) do
@@ -145,6 +150,21 @@ describe("extend", function()
 
 				assert.are_same({ ["other.key"] = { a = true, b = true, c = true } }, obj)
 			end)
+		end)
+	end)
+
+	describe(".luarc.json config", function()
+		local nestedLuarc = json.read(path("spec", "configs", "nested.luarc.json"))
+		local unnestedLuarc = json.read(path("spec", "configs", "unnested.luarc.json"))
+
+		it("works when preferring nested", function()
+			local newObj = extend(true, json.object({}), unnestedLuarc)
+			assert.are_same(nestedLuarc, newObj)
+		end)
+
+		it("works when preferring unnested", function()
+			local newObj = extend(false, json.object({}), unnestedLuarc)
+			assert.are_same(unnestedLuarc, newObj)
 		end)
 	end)
 end)
