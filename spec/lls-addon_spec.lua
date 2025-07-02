@@ -1,6 +1,3 @@
----@diagnostic disable-next-line: unknown-cast-variable
----@cast assert luassert
-
 local cfg = require("luarocks.core.cfg")
 local fs = require("luarocks.fs")
 local rockspecs = require("luarocks.rockspecs")

@@ -1,6 +1,3 @@
----@diagnostic disable-next-line: unknown-cast-variable
----@cast assert luassert
-
 local json = require("luarocks.build.lls-addon.json-util")
 
 describe("json-util", function()
