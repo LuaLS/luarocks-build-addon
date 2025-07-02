@@ -27,51 +27,20 @@ local function assertContext(context, ...)
 end
 
 ---reads .luarc.json into a table, or returns a new one if it doesn't exist
----@param luarcPath string
+---@param sourcePath string
 ---@return { [string]: any } luarc
-local function readOrCreateLuarc(luarcPath)
-	local luarc ---@type { [string]: any }
-	if fs.exists(luarcPath) then
-		log.info("Found " .. luarcPath)
-		luarc = json.read(luarcPath) --[[@as { [string]: any }]]
-		if not json.isObject(luarc) then
-			error("[BuildError]: Expected root of '.luarc.json' to be an object")
-		end
+local function readOrCreateLuarc(sourcePath)
+	if fs.exists(sourcePath) then
+		log.info("Found " .. sourcePath)
+		local luarc = json.read(sourcePath) --[[@as { [string]: any }]]
+		assert(json.isObject(luarc), "[BuildError]: Expected root of '.luarc.json' to be an object")
+		return luarc
 	else
-		log.info(luarcPath .. " not found, generating a new one")
-		luarc = json.object({})
-	end
-
-	return luarc
-end
-
----gets all keys from a json object
----@param keyorder string[]
----@param obj { [string]: any }
-local function getRecursiveKeys(keyorder, obj)
-	if json.isObject(obj) then
-		for k, v in pairs(obj) do
-			table.insert(keyorder, k)
-			getRecursiveKeys(keyorder, v)
-		end
-	elseif json.isArray(obj) then
-		for _, v in ipairs(obj) do
-			getRecursiveKeys(keyorder, v)
-		end
+		log.info(sourcePath .. " not found, generating a new one")
+		return json.object({})
 	end
 end
-
----writes the given table into .luarc.json
----@param luarcPath string
----@param luarc { [string]: any }
-local function writeLuarc(luarcPath, luarc)
-	local keyorder = {} ---@type string[]
-	getRecursiveKeys(keyorder, luarc)
-	table.sort(keyorder)
-	local contents = json.encode(luarc, { indent = 2, keyorder = keyorder }) --[[@as string]]
-	local file <close> = assertContext("when opening " .. luarcPath, io.open(luarcPath, "w")) --[[@as file*]]
-	assertContext("when writing to .luarc.json", file:write(contents))
-end
+M.readOrCreateLuarc = readOrCreateLuarc
 
 ---@return string
 local function getProjectDir()
@@ -84,6 +53,7 @@ local function getProjectDir()
 	end
 	return projectDir
 end
+M.getProjectDir = getProjectDir
 
 ---@param projectDir string
 ---@param rockspec luarocks.rockspec
@@ -101,6 +71,7 @@ local function getInstallDir(projectDir, rockspec, env)
 
 	return installDir
 end
+M.getInstallDir = getInstallDir
 
 ---@param pathsString string?
 ---@return string[]? paths
@@ -291,11 +262,11 @@ local function updateLuarcFiles(luarcFiles, luarc)
 
 			local oldSettings = readOrCreateLuarc(path)
 			extend(false, oldSettings, newSettings)
-			writeLuarc(path, oldSettings)
+			json.write(path, oldSettings, { sortKeys = true })
 		elseif type == "luarc" then
 			local oldLuarc = readOrCreateLuarc(path)
 			extend(true, oldLuarc, luarc)
-			writeLuarc(path, oldLuarc)
+			json.write(path, oldLuarc, { sortKeys = true })
 		else
 			error(string.format("unknown luarc path type '%s'", type))
 		end

@@ -76,4 +76,49 @@ function M.read(sourcePath)
 	return json.decode(contents, nil, json.null, objectMt, arrayMt)
 end
 
+---gets all keys from a json object
+---@param keyorder string[]
+---@param obj { [string]: any }
+local function getRecursiveKeys(keyorder, obj)
+	if json.isObject(obj) then
+		for k, v in pairs(obj) do
+			table.insert(keyorder, k)
+			getRecursiveKeys(keyorder, v)
+		end
+	elseif json.isArray(obj) then
+		for _, v in ipairs(obj) do
+			getRecursiveKeys(keyorder, v)
+		end
+	end
+end
+
+---@class lls-addon.json-util.write-options
+---@field sortKeys? boolean
+---@field indent? number
+---@field keyorder? any[]
+
+---@param destinationPath string
+---@param value any
+---@param opt? lls-addon.json-util.write-options
+function M.write(destinationPath, value, opt)
+	local options = { indent = 2 }
+
+	if opt then
+		if opt.sortKeys then
+			local keyorder = {} ---@type string[]
+			getRecursiveKeys(keyorder, value)
+			table.sort(keyorder)
+			options.keyorder = keyorder
+		end
+
+		for k, v in pairs(opt) do
+			options[k] = v
+		end
+	end
+
+	local contents = json.encode(value, options) --[[@as string]]
+	local file <close> = assertContext("when opening " .. destinationPath, io.open(destinationPath, "w")) --[[@as file*]]
+	assertContext("when writing to .luarc.json", file:write(contents))
+end
+
 return M
