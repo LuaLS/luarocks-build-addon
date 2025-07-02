@@ -66,7 +66,7 @@ luarocks test
 
 # report coverage
 luarocks test -- -c
-./lua_modules/bin/luacov -r html && ./luacov.report.html
+./luacov.report.html
 ```
 
 ---
