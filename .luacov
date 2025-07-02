@@ -4,6 +4,4 @@ return {
 		"scripts%/.+$",
 	},
 	reportfile = "luacov.report.html",
-	runreport = true,
-	deletestats = true,
 }
