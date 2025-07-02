@@ -154,8 +154,7 @@ describe("#only lls-addon", function()
 					return pathArg == path(currentDir, "config.json")
 				end,
 			})
-			stub(json, "read", function(pathArg)
-				assert.are_equal(path(currentDir, "config.json"), pathArg)
+			local jsonRead = stub(json, "read", function(pathArg)
 				return json.object({
 					settings = json.object({
 						["Lua.some.example"] = 42,
@@ -166,6 +165,33 @@ describe("#only lls-addon", function()
 
 			local luarc = compileLuarc(installDir, nil)
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
+			assert.stub(jsonRead).was.called(1)
+			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
+		end)
+
+		it("only copies from rockspec settings when also given config.json", function()
+			mock(log, --[[stub:]] true)
+			local installDir = path("E:", "path", "to", "rock")
+			local currentDir = path("E:", "path", "to", "types")
+
+			stubAll(fs, {
+				-- key = handler / return value
+				copy = true,
+				copy_contents = true,
+				make_dir = true,
+				current_dir = currentDir,
+				exists = function(pathArg)
+					return pathArg == path(currentDir, "config.json")
+				end,
+			})
+			local jsonRead = stub(json, "read", function(pathArg)
+				return nil, "this should not be called"
+			end)
+
+			local luarc = compileLuarc(installDir, { ["some.example"] = 96 })
+
+			assert.are_same({ ["some.example"] = 96 }, luarc)
+			assert.stub(jsonRead).was.called(0)
 		end)
 	end)
 end)
