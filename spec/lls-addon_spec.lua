@@ -1,5 +1,6 @@
 local cfg = require("luarocks.core.cfg")
 local fs = require("luarocks.fs")
+local pathMod = require("luarocks.path")
 local rockspecs = require("luarocks.rockspecs")
 
 local json = require("luarocks.build.lls-addon.json-util")
@@ -12,15 +13,25 @@ local function path(...)
 	return table.concat({ ... }, SEP)
 end
 
+---@param rockspecEntries? { [string]: any }
 ---@return luarocks.rockspec
-local function makeRockspec()
-	local rockspec, msg = rockspecs.from_persisted_table("types-0.1-1.rockspec", {
+local function makeRockspec(rockspecEntries)
+	local values = {
 		rockspec_format = "3.1",
 		package = "test",
 		version = "0.1-1",
 		source = { url = "" },
 		build = { type = "lls-addon" },
-	}, --[[globals:]] {}, --[[quick:]] true)
+	}
+
+	if rockspecEntries then
+		for k, v in pairs(rockspecEntries) do
+			values[k] = v
+		end
+	end
+
+	local rockspec, msg =
+		rockspecs.from_persisted_table("types-0.1-1.rockspec", values, --[[globals:]] {}, --[[quick:]] true)
 	---@diagnostic disable-next-line: redundant-parameter
 	assert.is_truthy(rockspec, msg)
 	return rockspec --[[@as luarocks.rockspec]]
@@ -79,12 +90,12 @@ local function pathEquals(...)
 end
 
 describe("#only lls-addon", function()
-	describe("compileLuarc", function()
-		lazy_setup(function()
-			cfg.init()
-			fs.init()
-		end)
+	lazy_setup(function()
+		cfg.init()
+		fs.init()
+	end)
 
+	describe("compileLuarc", function()
 		before_each(function()
 			mock(log, --[[stub:]] true)
 		end)
@@ -344,6 +355,58 @@ describe("#only lls-addon", function()
 
 			local files = findLuarcFiles(currentDir, { LUARCPATH = "" })
 			assert.are_same({}, files)
+		end)
+	end)
+
+	describe("getProjectDir", function()
+		local getProjectDir = llsAddon.getProjectDir
+		it("returns the project dir if detected", function()
+			cfg.project_dir = path("fake", "projectDir")
+			local projectDir = getProjectDir()
+			assert.are_same(path("fake", "projectDir"), projectDir)
+		end)
+
+		it("defaults to '.' if no project dir was detected", function()
+			cfg.project_dir = nil
+			stub(fs, "current_dir", path("fake", "currentDir"))
+			local projectDir = getProjectDir()
+			assert.are_same(path("fake", "currentDir"), projectDir)
+		end)
+	end)
+
+	describe("getInstallDir", function()
+		local getInstallDir = llsAddon.getInstallDir
+		it("returns a relative install dir if found", function()
+			local projectDir = path("fake", "projectDir")
+			local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
+			local stubInstallPath = stub(pathMod, "install_dir", path("fake", "projectDir", "installDir"))
+
+			local installDir = getInstallDir(projectDir, rockspec, {})
+			assert.are_equal(path("installDir"), installDir)
+			assert.stub(stubInstallPath).was.called(1)
+			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
+		end)
+
+		it("returns absolute path if not relative to project dir", function()
+			local projectDir = path("fake", "projectDir")
+			local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
+			local stubInstallPath = stub(pathMod, "install_dir", path("fake", "some", "other", "installDir"))
+
+			local installDir = getInstallDir(projectDir, rockspec, {})
+			assert.are_equal(path("fake", "some", "other", "installDir"), installDir)
+			assert.stub(stubInstallPath).was.called(1)
+			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
+		end)
+
+		it("returns absolute path if LLSADDON_ABSPATH is defined", function()
+			local projectDir = path("fake", "projectDir")
+			local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
+			local stubInstallPath = stub(pathMod, "install_dir", path("fake", "projectDir", "installDir"))
+
+			local installDir = getInstallDir(projectDir, rockspec, { ABSPATH = "true" })
+			assert.are_equal(path("fake", "projectDir", "installDir"), installDir)
+			assert.stub(stubInstallPath).was.called(1)
+			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
 		end)
 	end)
 end)
