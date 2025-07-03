@@ -262,13 +262,16 @@ describe("lls-addon", function()
 				exists = pathEquals(path(currentDir, "library"), path(currentDir, "plugin.lua")),
 			})
 
-			local luarc, installEntries = compileLuarc(installDir, { ["workspace.library"] = { "anotherLibrary" } })
+			local luarc, installEntries = compileLuarc(installDir, {
+				["workspace.library"] = { "anotherLibrary" },
+				["runtime.plugin"] = "anotherPlugin.lua",
+			})
 			assert.are_same({
 				["workspace.library"] = {
 					path(installDir, "library"),
 					"anotherLibrary",
 				},
-				["runtime.plugin"] = path(installDir, "plugin.lua"),
+				["runtime.plugin"] = "anotherPlugin.lua",
 			}, luarc)
 			assert.are_equal(2, #installEntries)
 			assert.contains({
