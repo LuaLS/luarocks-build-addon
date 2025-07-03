@@ -254,6 +254,34 @@ describe("lls-addon", function()
 			assert.are_equal(0, #installEntries)
 			assert.stub(jsonRead).was.called(0)
 		end)
+
+		it("lets rockspec settings overwrite library and plugin keys", function()
+			stubFs({
+				-- key = handler / return value
+				current_dir = currentDir,
+				exists = pathEquals(path(currentDir, "library"), path(currentDir, "plugin.lua")),
+			})
+
+			local luarc, installEntries = compileLuarc(installDir, { ["workspace.library"] = { "anotherLibrary" } })
+			assert.are_same({
+				["workspace.library"] = {
+					path(installDir, "library"),
+					"anotherLibrary",
+				},
+				["runtime.plugin"] = path(installDir, "plugin.lua"),
+			}, luarc)
+			assert.are_equal(2, #installEntries)
+			assert.contains({
+				type = "directory",
+				source = path(currentDir, "library"),
+				destination = path(installDir, "library"),
+			}, installEntries)
+			assert.contains({
+				type = "file",
+				source = path(currentDir, "plugin.lua"),
+				destination = path(installDir, "plugin.lua"),
+			}, installEntries)
+		end)
 	end)
 
 	describe("findLuarcFiles", function()

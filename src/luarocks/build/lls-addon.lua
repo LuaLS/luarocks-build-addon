@@ -174,22 +174,6 @@ local function compileLuarc(installDir, rockspecSettings)
 	local luarc ---@type { [string]: any }
 	local installEntries = {} ---@type lls-addon.install-entry[]
 
-	local configSource = dir.path(fs.current_dir(), "config.json")
-	if rockspecSettings ~= nil then
-		luarc = luarc or json.object({})
-		luarc = copyBuildSettings(rockspecSettings, luarc)
-	elseif fs.exists(configSource) then
-		-- also merge 'settings' from 'config.json' into .luarc.json
-		luarc = luarc or json.object({})
-		luarc = copyConfigSettings(configSource, luarc)
-
-		table.insert(installEntries, {
-			type = "file",
-			source = configSource,
-			destination = dir.path(installDir, "config.json"),
-		} --[[@as lls-addon.install-entry]])
-	end
-
 	local librarySource = dir.path(fs.current_dir(), "library")
 	if fs.exists(librarySource) then
 		local libraryDestination = dir.path(installDir, "library")
@@ -218,6 +202,22 @@ local function compileLuarc(installDir, rockspecSettings)
 			type = "file",
 			source = pluginSource,
 			destination = pluginDestination,
+		} --[[@as lls-addon.install-entry]])
+	end
+
+	local configSource = dir.path(fs.current_dir(), "config.json")
+	if rockspecSettings ~= nil then
+		luarc = luarc or json.object({})
+		luarc = copyBuildSettings(rockspecSettings, luarc)
+	elseif fs.exists(configSource) then
+		-- also merge 'settings' from 'config.json' into .luarc.json
+		luarc = luarc or json.object({})
+		luarc = copyConfigSettings(configSource, luarc)
+
+		table.insert(installEntries, {
+			type = "file",
+			source = configSource,
+			destination = dir.path(installDir, "config.json"),
 		} --[[@as lls-addon.install-entry]])
 	end
 
