@@ -9,3 +9,9 @@ local internal
 ---@param array any[]
 ---@param message? string
 function internal.contains(value, array, message) end
+
+---@type luassert.stub
+_G.stub = nil
+
+---@type luassert.spy.factory
+_G.spy = nil
