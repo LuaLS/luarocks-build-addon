@@ -61,7 +61,7 @@ You can try adding plugins or other settings to see if everything is working as 
 
 ```sh
 # the build fails if this is not set to 5.4, I don't know why
-echo "return 5.4" > .luarocks/default-lua-version.lua
+echo 'return "5.4"' > .luarocks/default-lua-version.lua
 luarocks test
 
 # report coverage
