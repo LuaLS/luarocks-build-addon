@@ -1,7 +1,11 @@
 return {
-	exclude = {
-		"lua_modules%/.+$",
-		"scripts%/.+$",
+	include = {
+		"src%/.+$",
+		-- "spec%/.+$",
+	},
+	modules = {
+		["luarocks.build.lls-addon"] = "src\\luarocks\\build\\lls-addon.lua",
+		["luarocks.build.lls-addon.*"] = "src",
 	},
 	reportfile = "luacov.report.html",
 }
