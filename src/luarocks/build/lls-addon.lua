@@ -50,7 +50,7 @@ local function getProjectDir()
 		log.info("project directory not found, defaulting to working directory")
 		assertContext("when changing to working directory", fs.change_dir("."))
 		projectDir = fs.current_dir()
-		assert(fs.pop_dir(), "unable to find source directory")
+		assert(fs.pop_dir(), "directory stack underflow")
 	end
 	return projectDir
 end
