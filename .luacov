@@ -7,5 +7,9 @@ return {
 		["luarocks.build.lls-addon"] = "src\\luarocks\\build\\lls-addon.lua",
 		["luarocks.build.lls-addon.*"] = "src",
 	},
+	reporter = "html",
+	runreport = true,
+	deletestats = true,
+	statsfile = "luacov.stats.out",
 	reportfile = "luacov.report.html",
 }
