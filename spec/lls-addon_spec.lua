@@ -89,7 +89,7 @@ local function pathEquals(...)
 	end
 end
 
-describe("#only lls-addon", function()
+describe("lls-addon", function()
 	lazy_setup(function()
 		cfg.init()
 		fs.init()
