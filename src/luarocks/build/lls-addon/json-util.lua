@@ -70,10 +70,17 @@ local function isArray(value)
 end
 M.isArray = isArray
 
+---@param path string
+---@param mode? openmode
+local function openFile(path, mode)
+	return io.open(path, mode)
+end
+M.openFile = openFile
+
 ---@param sourcePath string
 ---@return any
 function M.read(sourcePath)
-	local file <close> = assertContext("when opening " .. sourcePath, io.open(sourcePath))
+	local file <close> = assertContext("when opening " .. sourcePath, M.openFile(sourcePath))
 	local contents = file:read("a")
 	return json.decode(contents, nil, json.null, objectMt, arrayMt)
 end
@@ -119,7 +126,7 @@ function M.write(destinationPath, value, opt)
 	end
 
 	local contents = json.encode(value, options) --[[@as string]]
-	local file <close> = assertContext("when opening " .. destinationPath, io.open(destinationPath, "w")) --[[@as file*]]
+	local file <close> = assertContext("when opening " .. destinationPath, M.openFile(destinationPath, "w")) --[[@as file*]]
 	assertContext("when writing to .luarc.json", file:write(contents))
 end
 
