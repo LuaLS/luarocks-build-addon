@@ -1,6 +1,18 @@
 local lfs = require("lfs") ---@type LuaFileSystem
 
+local luarocks = {
+	cfg = require("luarocks.core.cfg"),
+	fs = require("luarocks.fs"),
+	path = require("luarocks.path"),
+	util = require("luarocks.util"),
+	cmd = {
+		init = require("luarocks.cmd.init"),
+		make = require("luarocks.cmd.make"),
+	},
+}
+
 local json = require("luarocks.build.lls-addon.json-util")
+local log = require("luarocks.build.lls-addon.log")
 
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
@@ -62,34 +74,56 @@ local function tryCopySettings()
 end
 
 local function makeProject()
-	return os.execute(table.concat({
-		("luarocks init --no-wrapper-scripts --no-gitignore > %s"):format(NULL),
-		("luarocks make > %s 2>&1"):format(NULL),
-	}, " && "))
+	local lock = assert(luarocks.fs.lock_access(luarocks.fs.current_dir()))
+	finally(function()
+		luarocks.fs.unlock_access(lock)
+	end)
+	stub(luarocks.util, "printout")
+	stub(luarocks.util, "warning")
+	stub(luarocks.util, "printerr")
+	local logMock = mock(log, --[[stub:]] true)
+
+	assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
+	luarocks.path.use_tree(path(luarocks.fs.current_dir(), "lua_modules"))
+	assert(luarocks.cmd.make.command({}))
+	mock.revert(logMock)
+end
+
+---@param dirPath string
+local function rmDir(dirPath)
+	for name in lfs.dir(dirPath) do
+		if name ~= "." and name ~= ".." then
+			local subPath = path(dirPath, name)
+			local mode = lfs.attributes(subPath, "mode")
+			if mode == "file" then
+				assert(os.remove(subPath))
+			elseif mode == "directory" then
+				rmDir(subPath)
+			end
+		end
+	end
+	assert(lfs.rmdir(dirPath))
 end
 
 ---@param dirPaths string[]
 ---@param filePaths string[]
 local function cleanProject(dirPaths, filePaths)
-	local commands = {}
 	for _, dirPath in ipairs(dirPaths) do
 		assert(dirPath:sub(1, 1) ~= "/", "don't pass paths starting at root")
 		if folderExists(dirPath) then
-			table.insert(commands, RMDIR_CMD:format(dirPath))
+			rmDir(dirPath)
 		end
 	end
 	for _, filePath in ipairs(filePaths) do
 		assert(filePath:sub(1, 1) ~= "/", "don't pass paths starting at root")
 		if fileExists(filePath) then
-			table.insert(commands, RM_CMD:format(filePath))
+			assert(os.remove(filePath))
 		end
 	end
-
-	return os.execute(table.concat(commands, " && "))
 end
 
 ---@param dir string
----@param handler fun(finally: fun())
+---@param handler fun(finally: fun(block: fun()))
 local function withProject(dir, handler)
 	assert(dir:sub(1, 1) ~= "/", "don't pass paths starting at root")
 	return function()
@@ -109,32 +143,36 @@ local function withProject(dir, handler)
 
 			assert(result, message)
 		end)
+		finally = newFinally
 		local cd = assert(lfs.currentdir())
 		assert(lfs.chdir(dir))
-		newFinally(function()
+		finally(function()
 			assert(lfs.chdir(cd))
 		end)
 		tryCopyLuarc()
 		tryCopySettings()
-		assert(makeProject())
-		newFinally(function()
-			assert(cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json", path(".vscode", "settings.json") }))
+		makeProject()
+		finally(function()
+			cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json", path(".vscode", "settings.json") })
 		end)
 		handler(newFinally)
 	end
 end
 
-describe("#slow behavior", function()
-	setup(function()
+describe("behavior", function()
+	local cd = assert(lfs.currentdir())
+	lazy_setup(function()
+		luarocks.cfg.init()
+		luarocks.fs.init()
 		assert(lfs.chdir(path("spec", "projects")))
 	end)
 
-	teardown(function()
-		assert(lfs.chdir(path("..", "..")))
+	lazy_teardown(function()
+		assert(lfs.chdir(cd))
 	end)
 
 	it(
-		"works when there is only a rockspec",
+		"#only works when there is only a rockspec",
 		withProject("rockspec-only", function()
 			assert.is_true(folderExists(INSTALL_DIR))
 			assert.is_false(fileExists(".luarc.json"))
