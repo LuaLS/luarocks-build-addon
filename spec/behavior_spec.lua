@@ -17,10 +17,6 @@ local log = require("luarocks.build.lls-addon.log")
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
 local SEP = package.config:sub(1, 1)
-local NULL = SEP == "\\" and "NUL" or "/dev/null"
-local RMDIR_CMD = SEP == "\\" and "RMDIR /S /Q %s" or "rm -rf %s"
-local RM_CMD = SEP == "\\" and string.format("DEL /Q %%s > %s", NULL) or "rm -f %s"
-
 ---@param ... string
 ---@return string
 local function path(...)
@@ -172,7 +168,7 @@ describe("behavior", function()
 	end)
 
 	it(
-		"#only works when there is only a rockspec",
+		"works when there is only a rockspec",
 		withProject("rockspec-only", function()
 			assert.is_true(folderExists(INSTALL_DIR))
 			assert.is_false(fileExists(".luarc.json"))
