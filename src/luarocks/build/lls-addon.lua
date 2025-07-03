@@ -42,7 +42,6 @@ local function readOrCreateLuarc(sourcePath)
 		return json.object({})
 	end
 end
-M.readOrCreateLuarc = readOrCreateLuarc
 
 ---@return string
 local function getProjectDir()
