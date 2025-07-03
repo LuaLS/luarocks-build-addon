@@ -107,8 +107,9 @@ describe("#only lls-addon", function()
 		it("creates no luarc when nothing is added", function()
 			local fs = stubFs({ current_dir = currentDir })
 
-			local luarc = compileLuarc(installDir, nil)
+			local luarc, installEntries = compileLuarc(installDir, nil)
 			assert.is_nil(luarc)
+			assert.are_equal(0, #installEntries)
 			assert.stub(fs.copy).was.called(0)
 			assert.stub(fs.copy_contents).was.called(0)
 			assert.stub(fs.exists).was.called_with(path(currentDir, "library"))
@@ -117,44 +118,52 @@ describe("#only lls-addon", function()
 		end)
 
 		it("works when given a library", function()
-			local fs = stubFs({
+			stubFs({
 				-- key = handler / return value
 				current_dir = currentDir,
 				exists = pathEquals(path(currentDir, "library")),
 			})
 
-			local luarc = compileLuarc(installDir, nil)
+			local luarc, installEntries = compileLuarc(installDir, nil)
 			assert.are_same({ ["workspace.library"] = { path(installDir, "library") } }, luarc)
-			assert.stub(fs.make_dir).was.called(1)
-			assert.stub(fs.make_dir).was.called_with(path(installDir, "library"))
-			assert.stub(fs.copy_contents).was.called(1)
-			assert.stub(fs.copy_contents).was.called_with(path(currentDir, "library"), path(installDir, "library"))
-			assert.stub(fs.copy).was.called(0)
+			assert.are_same({
+				{
+					type = "directory",
+					source = path(currentDir, "library"),
+					destination = path(installDir, "library"),
+				},
+			}, installEntries)
 		end)
 
 		it("works when given a plugin", function()
-			local stubFs = stubAll(fs, {
+			stubFs({
 				-- key = handler / return value
 				current_dir = currentDir,
 				exists = pathEquals(path(currentDir, "plugin.lua")),
 			})
 
-			local luarc = compileLuarc(installDir, nil)
+			local luarc, installEntries = compileLuarc(installDir, nil)
 			assert.are_same({ ["runtime.plugin"] = path(installDir, "plugin.lua") }, luarc)
-			assert.stub(stubFs.copy).was.called(1)
-			assert.stub(stubFs.copy).was.called_with(path(currentDir, "plugin.lua"), path(installDir, "plugin.lua"))
+			assert.are_same({
+				{
+					type = "file",
+					source = path(currentDir, "plugin.lua"),
+					destination = path(installDir, "plugin.lua"),
+				},
+			}, installEntries)
 		end)
 
 		it("works when given rockspec settings", function()
 			stubFs({ current_dir = currentDir })
 
-			local luarc = compileLuarc(installDir, --[[rockspecSettings:]] {
+			local luarc, installEntries = compileLuarc(installDir, --[[rockspecSettings:]] {
 				["some.example"] = 42,
 				another = {
 					example = 100,
 				},
 			})
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
+			assert.are_equal(0, #installEntries)
 		end)
 
 		it("errors when rockspec settings is not an object", function()
@@ -180,8 +189,15 @@ describe("#only lls-addon", function()
 				})
 			end)
 
-			local luarc = compileLuarc(installDir, nil)
+			local luarc, installEntries = compileLuarc(installDir, nil)
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
+			assert.are_same({
+				{
+					type = "file",
+					source = path(currentDir, "config.json"),
+					destination = path(installDir, "config.json"),
+				},
+			}, installEntries)
 			assert.stub(jsonRead).was.called(1)
 			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
 		end)
@@ -232,9 +248,10 @@ describe("#only lls-addon", function()
 				return nil, "this should not be called"
 			end)
 
-			local luarc = compileLuarc(installDir, { ["different.example"] = 96 })
+			local luarc, installEntries = compileLuarc(installDir, { ["different.example"] = 96 })
 
 			assert.are_same({ ["different.example"] = 96 }, luarc)
+			assert.are_equal(0, #installEntries)
 			assert.stub(jsonRead).was.called(0)
 		end)
 	end)

@@ -145,47 +145,82 @@ local function copyDirectory(source, destination)
 	assertContext("when copying files into " .. destination, fs.copy_contents(source, destination))
 end
 
+---@class lls-addon.install-entry
+---@field type "file" | "directory"
+---@field source string
+---@field destination string
+
+local function copyInstallEntries(installEntries)
+	for _, entry in ipairs(installEntries) do
+		local type = entry.type
+		local source = entry.source
+		local destination = entry.destination
+		if type == "file" then
+			copyFile(source, destination)
+		elseif type == "directory" then
+			copyDirectory(source, destination)
+		else
+			error("unknown install entry type: " .. type)
+		end
+	end
+end
+
 ---@param installDir string
 ---@param rockspecSettings unknown
 ---@return { [string]: any }? luarc
+---@return lls-addon.install-entry[] installEntries
 local function compileLuarc(installDir, rockspecSettings)
 	local luarc ---@type { [string]: any }
-
-	local librarySource = dir.path(fs.current_dir(), "library")
-	if fs.exists(librarySource) then
-		local libraryDestination = dir.path(installDir, "library")
-		copyDirectory(librarySource, libraryDestination)
-
-		-- also insert the library/ directory into 'workspace.library'
-		luarc = luarc or json.object({})
-		log.info("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
-		luarc["workspace.library"] = json.array({ libraryDestination })
-	end
-
-	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
-	if fs.exists(pluginSource) then
-		local pluginDestination = dir.path(installDir, "plugin.lua")
-		copyFile(pluginSource, pluginDestination)
-
-		-- also set 'runtime.plugin' in .luarc.json
-		luarc = luarc or json.object({})
-		log.info("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
-		luarc["runtime.plugin"] = pluginDestination
-	end
+	local installEntries = {} ---@type lls-addon.install-entry[]
 
 	local configSource = dir.path(fs.current_dir(), "config.json")
 	if rockspecSettings ~= nil then
 		luarc = luarc or json.object({})
 		luarc = copyBuildSettings(rockspecSettings, luarc)
 	elseif fs.exists(configSource) then
-		copyFile(configSource, dir.path(installDir, "config.json"))
-
 		-- also merge 'settings' from 'config.json' into .luarc.json
 		luarc = luarc or json.object({})
 		luarc = copyConfigSettings(configSource, luarc)
+
+		table.insert(installEntries, {
+			type = "file",
+			source = configSource,
+			destination = dir.path(installDir, "config.json"),
+		} --[[@as lls-addon.install-entry]])
 	end
 
-	return luarc
+	local librarySource = dir.path(fs.current_dir(), "library")
+	if fs.exists(librarySource) then
+		local libraryDestination = dir.path(installDir, "library")
+
+		luarc = luarc or json.object({})
+		log.info("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
+		luarc["workspace.library"] = json.array({ libraryDestination })
+
+		table.insert(installEntries, {
+			type = "directory",
+			source = librarySource,
+			destination = libraryDestination,
+		} --[[@as lls-addon.install-entry]])
+	end
+
+	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
+	if fs.exists(pluginSource) then
+		local pluginDestination = dir.path(installDir, "plugin.lua")
+
+		-- also set 'runtime.plugin' in .luarc.json
+		luarc = luarc or json.object({})
+		log.info("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
+		luarc["runtime.plugin"] = pluginDestination
+
+		table.insert(installEntries, {
+			type = "file",
+			source = pluginSource,
+			destination = pluginDestination,
+		} --[[@as lls-addon.install-entry]])
+	end
+
+	return luarc, installEntries
 end
 M.compileLuarc = compileLuarc
 
@@ -286,11 +321,12 @@ local function buildLuarc(rockspec, env)
 
 	local projectDir = getProjectDir()
 	local installDir = getInstallDir(projectDir, rockspec, env)
-	local luarc = compileLuarc(installDir, rockspec.build["settings"])
+	local luarc, installEntries = compileLuarc(installDir, rockspec.build["settings"])
 
 	if luarc then
 		local luarcFiles = findLuarcFiles(projectDir, env)
 		updateLuarcFiles(luarcFiles, luarc)
+		copyInstallEntries(installEntries)
 	else
 		log.warn("addon has no features; no files written!")
 	end
