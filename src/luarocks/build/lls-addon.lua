@@ -33,7 +33,9 @@ local function readOrCreateLuarc(sourcePath)
 	if fs.exists(sourcePath) then
 		log.info("Found " .. sourcePath)
 		local luarc = json.read(sourcePath) --[[@as { [string]: any }]]
-		assert(json.isObject(luarc), "[BuildError]: Expected root of '.luarc.json' to be an object")
+		if not json.isObject(luarc) then
+			error("[BuildError]: Expected root of " .. sourcePath .. " to be an object")
+		end
 		return luarc
 	else
 		log.info(sourcePath .. " not found, generating a new one")
@@ -95,15 +97,13 @@ local function copyConfigSettings(sourcePath, luarc)
 	local config = json.read(sourcePath)
 
 	if not json.isObject(config) then
-		log.warn("Root of 'config.json' is not an object, skipping")
-		return luarc
+		error("[BuildError]: root of " .. sourcePath .. " is not an object.")
 	end
 	---@cast config { [string]: any }
 
 	local settings = config.settings
 	if not json.isObject(settings) then
-		log.warn("key 'settings' of " .. sourcePath .. " is not an object, skipping")
-		return luarc
+		error("[BuildError]: key 'settings' of " .. sourcePath .. " is not an object.")
 	end
 	---@cast settings { [string]: any }
 

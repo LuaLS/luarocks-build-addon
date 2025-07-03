@@ -146,13 +146,21 @@ describe("#only lls-addon", function()
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
 		end)
 
+		it("errors when rockspec settings is not an object", function()
+			stubFs({ currentDir = currentDir })
+
+			assert.error(function()
+				compileLuarc(installDir, { "some", "example" })
+			end)
+		end)
+
 		it("works when given a config.json", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = currentDir,
 				exists = pathEquals(path(currentDir, "config.json")),
 			})
-			local jsonRead = stub(json, "read", function(pathArg)
+			local jsonRead = stub(json, "read", function()
 				return json.object({
 					settings = json.object({
 						["Lua.some.example"] = 42,
@@ -163,6 +171,42 @@ describe("#only lls-addon", function()
 
 			local luarc = compileLuarc(installDir, nil)
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
+			assert.stub(jsonRead).was.called(1)
+			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
+		end)
+
+		it("errors when config.json is not an object", function()
+			stubFs({
+				-- key = handler / return value
+				current_dir = currentDir,
+				exists = pathEquals(path(currentDir, "config.json")),
+			})
+			local jsonRead = stub(json, "read", function()
+				return false
+			end)
+
+			assert.error(function()
+				compileLuarc(installDir, nil)
+			end)
+
+			assert.stub(jsonRead).was.called(1)
+			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
+		end)
+
+		it("errors when config.json's settings key is not an object", function()
+			stubFs({
+				-- key = handler / return value
+				current_dir = currentDir,
+				exists = pathEquals(path(currentDir, "config.json")),
+			})
+			local jsonRead = stub(json, "read", function()
+				return json.object({ settings = false })
+			end)
+
+			assert.error(function()
+				compileLuarc(installDir, nil)
+			end)
+
 			assert.stub(jsonRead).was.called(1)
 			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
 		end)
