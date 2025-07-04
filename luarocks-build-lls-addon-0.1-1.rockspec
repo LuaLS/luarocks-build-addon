@@ -14,5 +14,6 @@ test_dependencies = {
 	"busted ~> 2.2",
 	"luafilesystem ~> 1.8",
 	"inspect ~> 3.1",
-	"luarocks ~> 3.12",
+	"luarocks == 3.12.2",
+	"md5 ~> 1.3",
 }
