@@ -23,6 +23,8 @@ local function path(...)
 	return table.concat({ ... }, SEP)
 end
 
+local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", "types", "0.1-1")
+
 ---@param path string
 ---@return boolean
 local function fileExists(path)
@@ -36,8 +38,6 @@ local function folderExists(path)
 	local attrs = lfs.attributes(path)
 	return attrs ~= nil and attrs.mode == "directory"
 end
-
-local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", "types", "0.1-1")
 
 ---@return boolean
 local function tryCopyLuarc()
@@ -67,22 +67,6 @@ local function tryCopySettings()
 	assert(settings:write(contents))
 	assert(settings:close())
 	return true
-end
-
-local function makeProject()
-	local lock = assert(luarocks.fs.lock_access(luarocks.fs.current_dir()))
-	finally(function()
-		luarocks.fs.unlock_access(lock)
-	end)
-	stub(luarocks.util, "printout")
-	stub(luarocks.util, "warning")
-	stub(luarocks.util, "printerr")
-	local logMock = mock(log, --[[stub:]] true)
-
-	assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
-	luarocks.path.use_tree(path(luarocks.fs.current_dir(), "lua_modules"))
-	assert(luarocks.cmd.make.command({}))
-	mock.revert(logMock)
 end
 
 ---@param dirPath string
@@ -118,40 +102,64 @@ local function cleanProject(dirPaths, filePaths)
 	end
 end
 
+local function makeProject()
+	tryCopyLuarc()
+	tryCopySettings()
+	local lock = assert(luarocks.fs.lock_access(luarocks.fs.current_dir()))
+	finally(function()
+		luarocks.fs.unlock_access(lock)
+	end)
+	stub(luarocks.util, "printout")
+	stub(luarocks.util, "warning")
+	stub(luarocks.util, "printerr")
+	local logMock = mock(log, --[[stub:]] true)
+
+	assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
+	luarocks.path.use_tree(path(luarocks.fs.current_dir(), "lua_modules"))
+	assert(luarocks.cmd.make.command({}))
+	mock.revert(logMock)
+	finally(function()
+		cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json", path(".vscode", "settings.json") })
+	end)
+end
+
+local function upgradeFinally()
+	local cleanupAll = {} ---@type (fun())[]
+	---@param fun fun()
+	local function newFinally(fun)
+		table.insert(cleanupAll, fun)
+	end
+	finally(function()
+		local result = true
+		local message = nil
+		for i = #cleanupAll, 1, -1 do
+			local s, msg = pcall(cleanupAll[i])
+			result = result and s
+			message = message or msg
+		end
+
+		assert(result, message)
+	end)
+	finally = newFinally
+end
+
+local function pushDir(dirPath)
+	local cd = assert(lfs.currentdir())
+	assert(lfs.chdir(dirPath))
+	finally(function()
+		assert(lfs.chdir(cd))
+	end)
+end
+
 ---@param dir string
----@param handler fun(finally: fun(block: fun()))
+---@param handler fun()
 local function withProject(dir, handler)
 	assert(dir:sub(1, 1) ~= "/", "don't pass paths starting at root")
 	return function()
-		local cleanupAll = {} ---@type (fun())[]
-		---@param fun fun()
-		local function newFinally(fun)
-			table.insert(cleanupAll, fun)
-		end
-		finally(function()
-			local result = true
-			local message = nil
-			for i = #cleanupAll, 1, -1 do
-				local s, msg = pcall(cleanupAll[i])
-				result = result and s
-				message = message or msg
-			end
-
-			assert(result, message)
-		end)
-		finally = newFinally
-		local cd = assert(lfs.currentdir())
-		assert(lfs.chdir(dir))
-		finally(function()
-			assert(lfs.chdir(cd))
-		end)
-		tryCopyLuarc()
-		tryCopySettings()
+		upgradeFinally()
+		pushDir(dir)
 		makeProject()
-		finally(function()
-			cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json", path(".vscode", "settings.json") })
-		end)
-		handler(newFinally)
+		handler()
 	end
 end
 
@@ -330,4 +338,16 @@ describe("behavior", function()
 			}, luarc)
 		end)
 	)
+
+	it("errors when given a bad luarc", function()
+		local dir = "with-rockspec-settings-bad-luarc"
+		upgradeFinally()
+		pushDir(dir)
+		finally(function()
+			cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json" })
+		end)
+		assert.error(function()
+			makeProject()
+		end)
+	end)
 end)
