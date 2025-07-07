@@ -8,7 +8,7 @@
 -   `LLSADDON_LUARCPATH="$path1;$path2;..."`: a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
 -   `LLSADDON_VSCSETTINGSPATH="$path1;$path2;..."`: a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon.
     -   If at least one of the above variables is set to `""` and the other is unset, no config files will be modified by the build process.
--   `LLSADDON_ABSPATH`: If defined, indicates any paths added to the config file should be absolute paths, rather than relative ones. Unset the variable to use relative paths.
+-   `LLSADDON_ABSPATH`: If defined as none of `"false"`, `"no"`, `"off"` or `"0"`, indicates any paths added to the config file should be absolute paths, rather than relative ones.
 
 ## Building
 

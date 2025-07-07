@@ -446,7 +446,7 @@ describe("lls-addon", function()
 			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
 		end)
 
-		it("returns absolute path if LLSADDON_ABSPATH is defined", function()
+		it("returns absolute path if LLSADDON_ABSPATH is truthy", function()
 			local projectDir = path("fake", "projectDir")
 			local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
 			local stubInstallPath = stub(pathMod, "install_dir", path("fake", "projectDir", "installDir"))
@@ -456,5 +456,18 @@ describe("lls-addon", function()
 			assert.stub(stubInstallPath).was.called(1)
 			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
 		end)
+
+		for _, falsyString in ipairs({ "false", "no", "off", "0" }) do
+			it(string.format("returns absolute path if LLSADDON_ABSPATH is %q", falsyString), function()
+				local projectDir = path("fake", "projectDir")
+				local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
+				local stubInstallPath = stub(pathMod, "install_dir", path("fake", "projectDir", "installDir"))
+
+				local installDir = getInstallDir(projectDir, rockspec, { ABSPATH = falsyString })
+				assert.are_equal("installDir", installDir)
+				assert.stub(stubInstallPath).was.called(1)
+				assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
+			end)
+		end
 	end)
 end)

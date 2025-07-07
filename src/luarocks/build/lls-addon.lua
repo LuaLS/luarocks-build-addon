@@ -16,6 +16,37 @@ local DIR_SEP = string.sub(package.config, 1, 1)
 local PATH_SEP = string.sub(package.config, 3, 3)
 local PATH_SEP_PATTERN = "[^%" .. PATH_SEP .. "]+"
 
+local FALSY_STRINGS = {
+	["false"] = true,
+	["no"] = true,
+	["off"] = true,
+	["0"] = true,
+}
+
+---@param val string?
+---@return boolean
+local function parseFlag(val)
+	if val == nil then
+		return false
+	else
+		return not FALSY_STRINGS[val]
+	end
+end
+
+---@param pathsString string?
+---@return string[]? paths
+local function parsePathList(pathsString)
+	if not pathsString then
+		return nil
+	end
+
+	local paths = {}
+	for luarcPath in string.gmatch(pathsString, PATH_SEP_PATTERN) do
+		table.insert(paths, luarcPath)
+	end
+	return paths
+end
+
 local function assertContext(context, ...)
 	-- luacov: disable
 	local s, msg = ...
@@ -62,7 +93,7 @@ M.getProjectDir = getProjectDir
 ---@return string
 local function getInstallDir(projectDir, rockspec, env)
 	local installDir = path.install_dir(rockspec.package, rockspec.version)
-	if not env.ABSPATH and installDir:sub(1, #projectDir) == projectDir then
+	if not parseFlag(env.ABSPATH) and installDir:sub(1, #projectDir) == projectDir then
 		log.info("Making install directory relative to " .. projectDir)
 		installDir = installDir:sub(#projectDir + 1)
 		if installDir:sub(1, 1) == DIR_SEP then
@@ -73,20 +104,6 @@ local function getInstallDir(projectDir, rockspec, env)
 	return installDir
 end
 M.getInstallDir = getInstallDir
-
----@param pathsString string?
----@return string[]? paths
-local function parsePathList(pathsString)
-	if not pathsString then
-		return nil
-	end
-
-	local paths = {}
-	for luarcPath in string.gmatch(pathsString, PATH_SEP_PATTERN) do
-		table.insert(paths, luarcPath)
-	end
-	return paths
-end
 
 ---merges ('config.json').settings into .luarc.json
 ---@param sourcePath string
