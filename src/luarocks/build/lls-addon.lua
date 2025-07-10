@@ -356,8 +356,9 @@ end
 M.installAddon = installAddon
 
 ---@param rockspec luarocks.rockspec
+---@param noInstall boolean
 ---@return boolean, string?
-function M.run(rockspec)
+function M.run(rockspec, noInstall)
 	assert(rockspec:type() == "rockspec", "argument is not a rockspec")
 
 	local env = {
