@@ -102,7 +102,8 @@ local function cleanProject(dirPaths, filePaths)
 	end
 end
 
-local function makeProject()
+---@param noInstall? boolean
+local function makeProject(noInstall)
 	tryCopyLuarc()
 	tryCopySettings()
 	local lock = assert(luarocks.fs.lock_access(luarocks.fs.current_dir()))
@@ -116,7 +117,8 @@ local function makeProject()
 
 	assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
 	luarocks.path.use_tree(path(luarocks.fs.current_dir(), "lua_modules"))
-	assert(luarocks.cmd.make.command({}))
+	luarocks.cfg.no_install = noInstall
+	assert(luarocks.cmd.make.command({ no_install = noInstall }))
 	mock.revert(logMock)
 	finally(function()
 		cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json", path(".vscode", "settings.json") })
@@ -349,5 +351,19 @@ describe("behavior", function()
 		assert.error(function()
 			makeProject()
 		end)
+	end)
+
+	it("doesn't install when given --no-install", function()
+		local dir = "no-install"
+		upgradeFinally()
+		pushDir(dir)
+		finally(function()
+			cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json" })
+		end)
+		makeProject(true)
+		assert.is_false(folderExists(path(INSTALL_DIR, "library")))
+		assert.is_false(fileExists(path(INSTALL_DIR, ".luarc.json")))
+		assert.is_false(fileExists(path(INSTALL_DIR, "config.json")))
+		assert.is_false(fileExists(path(INSTALL_DIR, "plugin.lua")))
 	end)
 end)
