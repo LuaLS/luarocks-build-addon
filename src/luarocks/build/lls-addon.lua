@@ -65,7 +65,7 @@ local function readOrCreateLuarc(sourcePath)
 		log.info("Found " .. sourcePath)
 		local luarc = json.read(sourcePath) --[[@as { [string]: any }]]
 		if not json.isObject(luarc) then
-			error("[BuildError]: Expected root of " .. sourcePath .. " to be an object")
+			error("[BuildError]: Expected root of " .. sourcePath .. " to be an object.")
 		end
 		return luarc
 	else
@@ -113,13 +113,17 @@ local function copyConfigSettings(sourcePath, luarc)
 	local config = json.read(sourcePath)
 
 	if not json.isObject(config) then
-		error("[BuildError]: root of " .. sourcePath .. " is not an object.")
+		error("[BuildError]: root of " .. sourcePath .. " is not an object. File an issue with the addon developer.")
 	end
 	---@cast config { [string]: any }
 
 	local settings = config.settings
 	if not json.isObject(settings) then
-		error("[BuildError]: key 'settings' of " .. sourcePath .. " is not an object.")
+		error(
+			"[BuildError]: key 'settings' of "
+				.. sourcePath
+				.. " is not an object. File an issue with the addon developer."
+		)
 	end
 	---@cast settings { [string]: any }
 
@@ -138,7 +142,7 @@ end
 local function copyBuildSettings(settings, luarc)
 	settings = json.coerce(settings)
 	if not json.isObject(settings) then
-		error("'rockspec.build.settings' is not an object.")
+		error("[BuildError]: 'rockspec.build.settings' is not an object. File an issue with the addon developer.")
 	end
 
 	log.info("Merging 'rockspec.build.settings' into .luarc.json")
