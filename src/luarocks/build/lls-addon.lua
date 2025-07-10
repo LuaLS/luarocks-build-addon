@@ -181,7 +181,7 @@ local function installFiles(installEntries)
 			copyDirectory(source, destination)
 		else
 			-- luacov: disable
-			error("unknown install entry type: " .. type)
+			error("Unreachable: unknown install entry type: " .. type)
 			-- luacov: enable
 		end
 	end
@@ -326,7 +326,7 @@ local function installLuarcFiles(luarcFiles, luarc)
 			json.write(path, oldLuarc, { sortKeys = true })
 		else
 			-- luacov: disable
-			error("unknown luarc path type: " .. type)
+			error("Unreachable: unknown luarc path type: " .. type)
 			-- luacov: enable
 		end
 	end
