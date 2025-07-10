@@ -385,7 +385,9 @@ function M.run(rockspec, noInstall)
 		if match then
 			return false, match
 		else
+			-- luacov: disable
 			error(msg)
+			-- luacov: enable
 		end
 	end
 	return true
