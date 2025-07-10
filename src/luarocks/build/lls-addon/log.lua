@@ -1,3 +1,5 @@
+---this exists only so it can be stubbed out during testing.
+
 -- luacov: disable
 local M = {}
 
