@@ -44,6 +44,7 @@ describe("extend", function()
 					arr = extend(nested, arr, json.array({ json.array({ "some" }) }))
 					assert.are_same({ { "some" } }, arr)
 				end)
+
 				it("checks for non-existence by deep equality", function()
 					local arr = json.array({ json.array({ "some" }) })
 					arr = extend(nested, arr, json.array({ json.array({ "new" }) }))
