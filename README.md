@@ -1,6 +1,8 @@
 # Experimental LuaRocks Build Backend for LuaLS Addons
 
-## Supported environment variables
+## Supported variables
+
+These variables can be defined in a `config-5.X.lua` file or on the command-line as `luarocks VAR=VALUE -- ...`
 
 > [!NOTE]
 > The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system.
