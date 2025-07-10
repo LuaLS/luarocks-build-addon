@@ -369,9 +369,9 @@ function M.run(rockspec, noInstall)
 	assert(rockspec:type() == "rockspec", "argument is not a rockspec")
 
 	local env = {
-		ABSPATH = os.getenv("LLSADDON_ABSPATH"),
-		LUARCPATH = os.getenv("LLSADDON_LUARCPATH"),
-		VSCSETTINGSPATH = os.getenv("LLSADDON_VSCSETTINGSPATH"),
+		ABSPATH = cfg.variables["LLSADDON_ABSPATH"],
+		LUARCPATH = cfg.variables["LLSADDON_LUARCPATH"],
+		VSCSETTINGSPATH = cfg.variables["LLSADDON_VSCSETTINGSPATH"],
 	}
 
 	local s, msg = pcall(installAddon, rockspec, env, noInstall)
