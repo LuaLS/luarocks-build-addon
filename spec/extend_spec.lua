@@ -11,8 +11,9 @@ end
 
 describe("extend", function()
 	describe("array", function()
-		for _, nested in ipairs({ true, false }) do
-			describe("prefers" .. (nested and "nested" or "unnested"), function()
+		for _, prefer in ipairs({ "nested", "unnested" }) do
+			local nested = prefer == "nested"
+			describe("prefers " .. prefer, function()
 				it("gets replaced if it doesn't have an arrayMt", function()
 					local arr = { "some" }
 					local new = json.array({ "new" })
@@ -42,6 +43,11 @@ describe("extend", function()
 					local arr = json.array({ json.array({ "some" }) })
 					arr = extend(nested, arr, json.array({ json.array({ "some" }) }))
 					assert.are_same({ { "some" } }, arr)
+				end)
+				it("checks for non-existence by deep equality", function()
+					local arr = json.array({ json.array({ "some" }) })
+					arr = extend(nested, arr, json.array({ json.array({ "new" }) }))
+					assert.are_same({ { "some" }, { "new" } }, arr)
 				end)
 			end)
 		end
