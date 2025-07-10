@@ -322,7 +322,7 @@ local function installLuarcFiles(luarcFiles, luarc)
 			json.write(path, oldLuarc, { sortKeys = true })
 		else
 			-- luacov: disable
-			error(string.format("unknown luarc path type '%s'", type))
+			error("unknown luarc path type: " .. type)
 			-- luacov: enable
 		end
 	end
