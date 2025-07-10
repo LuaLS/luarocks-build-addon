@@ -336,22 +336,29 @@ M.installLuarcFiles = installLuarcFiles
 ---  references to the above copied files
 ---@param rockspec luarocks.rockspec
 ---@param env { [string]: string? }
-local function installAddon(rockspec, env)
+---@param noInstall boolean
+local function installAddon(rockspec, env, noInstall)
 	log.info("Building addon " .. rockspec.package .. " @ " .. rockspec.version)
 
 	local projectDir = getProjectDir()
 	local installDir = getInstallDir(projectDir, rockspec, env)
 	local luarc, installEntries = compileLuarc(installDir, rockspec.build["settings"])
 
-	if luarc then
-		local luarcFiles = findLuarcFiles(projectDir, env)
-		installLuarcFiles(luarcFiles, luarc)
-
-		-- for copying library, plugin.lua, and config.json
-		installFiles(installEntries)
-	else
+	if not luarc then
 		log.warn("addon has no features; no files written!")
+		return
 	end
+
+	local luarcFiles = findLuarcFiles(projectDir, env)
+	if noInstall then
+		log.info("--no-install option detected, stopping early")
+		return
+	end
+
+	installLuarcFiles(luarcFiles, luarc)
+
+	-- for copying library, plugin.lua, and config.json
+	installFiles(installEntries)
 end
 M.installAddon = installAddon
 
@@ -367,7 +374,7 @@ function M.run(rockspec, noInstall)
 		VSCSETTINGSPATH = os.getenv("LLSADDON_VSCSETTINGSPATH"),
 	}
 
-	local s, msg = pcall(installAddon, rockspec, env)
+	local s, msg = pcall(installAddon, rockspec, env, noInstall)
 	if not s then
 		---@cast msg string
 		local match = msg:match("%[BuildError%]%: (.*)$")
