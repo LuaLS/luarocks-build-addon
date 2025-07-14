@@ -1,39 +1,67 @@
-# Experimental LuaRocks Build Backend for LuaLS Addons
+# `luarocks-build-lls-addon`
 
-## Supported variables
+A LuaRocks addon for installing [lua-language-server](https://github.com/LuaLS/lua-language-server) addons from a LuaRocks repository.
 
-These variables can be defined in a `config-5.X.lua` file or on the command-line as `luarocks VAR=VALUE -- ...`
+## Usage for End-users
+
+End-users can manage addon installations using the LuaRocks CLI.
+
+-   `luarocks install package-name` - add an addon named `package-name`
+-   `luarocks remove package-name` - remove an addon named `package-name`
+-   `luarocks doc package-name` - view information about an addon named `package-name`
+-   etc.
+
+Users can also browse addons online from https://luarocks.org/m/luacats.
+
+### Variables
+
+You can change the behavior of the installer by defining these variables in a `config-5.X.lua` file or on the command-line as `luarocks VAR=VALUE -- ...`
 
 > [!NOTE]
 > The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system.
 
--   `LLSADDON_LUARCPATH="$path1;$path2;..."`: a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
--   `LLSADDON_VSCSETTINGSPATH="$path1;$path2;..."`: a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon.
+-   `LLSADDON_LUARCPATH="$path1;$path2;..."` - a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
+-   `LLSADDON_VSCSETTINGSPATH="$path1;$path2;..."` - a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon.
     -   If at least one of the above variables is set to `""` and the other is unset, no config files will be modified by the build process.
--   `LLSADDON_ABSPATH`: If defined as none of `"false"`, `"no"`, `"off"` or `"0"`, indicates any paths added to the config file should be absolute paths, rather than relative ones.
+-   `LLSADDON_ABSPATH` - If defined as none of `"false"`, `"no"`, `"off"` or `"0"`, indicates any paths added to the config file should be absolute paths, rather than relative ones.
 
-## Building
+## Usage for Addon Developers
 
-1. Start by cloning this repo.
+Addon developers can should have a similar [addon file structure](https://luals.github.io/wiki/addons/#addon-anatomy) as an old-style addon, except the `config.json` can optionally be replaced with a rockspec file.
 
-2. `luarocks --local --lua-version=5.4 make` to build this rock and install it in the user-level rocks tree so it can be used to build other rocks.
-
-3. For testing, clone an addon. I have been using the [cc-tweaked documentation addon](https://gitlab.com/carsakiller/cc-tweaked-documentation).
-
-4. Within that cloned addon, create a `.rockspec`, like below:
-
-`cc-tweaked-dev-1.rockspec`
+Addon developers can define their addon using a rockspec file with the following block:
 
 ```lua
+build = {
+    type = "lls-addon",
+    -- build rules...
+}
+```
+
+Addons can be developed in a similar way to any other LuaRock. Dependencies to other addons can be specified in the `dependencies` table, and general information can be found in the `description` table.
+
+### Build Rules
+
+-   **build.settings** (table) - Contains a key-value dictionary of [settings](https://luals.github.io/wiki/settings/) to be merged into the LuaLS configuration. The `config.json` file will be ignored if this entry exists.
+
+### Example
+
+Here is an example for [carsakiller's CC Tweaked type definitions](https://gitlab.com/carsakiller/cc-tweaked-documentation):
+
+```lua
+-- ./cats-cc-tweaked-1.0.0-1.rockspec
 rockspec_format = "3.0"
-package = "cc-tweaked"
-version = "dev-1"
+package = "cats-cc-tweaked"
+version = "1.0.0-1"
 source = {
-    url = "https://gitlab.com/carsakiller/cc-tweaked-documentation",
+    url = "git+https://gitlab.com/carsakiller/cc-tweaked-documentation.git",
+    branch = "luarocks-build", -- this branch does not actually exist
 }
 description = {
     summary = "LuaCATS annotations for CC:Tweaked",
-    detailed = "Manually created LuaCATS annotations for Minecraft's CC:Tweaked computer mod",
+    detailed = [[
+        This documentation covers the Lua API for ComputerCraft: Tweaked and is meant to be used with Sumneko's Lua Language Server as it uses its LuaCATS annotation system.
+    ]],
     homepage = "https://gitlab.com/carsakiller/cc-tweaked-documentation",
     license = "MIT",
 }
@@ -51,18 +79,24 @@ build = {
 }
 ```
 
-5. Try to install the repo by running `luarocks make`. This will use the custom build backend to copy some directories/files and modify/create the `.luarc.json` file to make LuaLS aware.
+## Building
 
-6. You should see that there is a `.luarc.json` in the `cc-tweaked`'s project directory with all the required keys filled in.
+```sh
+git clone https://github.com/LuaLS/luarocks-build-addon luarocks-build-lls-addon
+cd luarocks-build-lls-addon
 
-Now you should have types! This step obviously still needs a lot of work to automatically apply the path and deal with global/local installs, etc.
+# Installs the current source as a rock in the nearest rocks directory
+luarocks make
 
-You can try adding plugins or other settings to see if everything is working as intended.
+# If you want to test this build with another addon on your system, run this
+luarocks --local --lua-version=5.4 make
+```
 
 ## Testing
 
 ```sh
 # the build fails if this is not set to 5.4, I don't know why
+mkdir .luarocks
 echo 'return "5.4"' > .luarocks/default-lua-version.lua
 luarocks test
 
@@ -70,7 +104,3 @@ luarocks test
 luarocks test -- -c
 ./lua_modules/bin/luacov -r html && ./luacov.report.html
 ```
-
----
-
-It isn't ideal, but it is using nothing but LuaRocks 🤷. I would love a `dev_dependencies` field in `.rockspec` files to allow the addon to be installed for dev work but not build/prod. Open to any suggestions on how to improve this, including not hacking around LuaRocks and just creating a separate CLI tool 😄
