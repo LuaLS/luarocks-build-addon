@@ -1,3 +1,5 @@
+local dir = require("luarocks.dir")
+local fs = require("luarocks.fs")
 local json = require("luarocks.vendor.dkjson")
 
 local M = {
@@ -73,6 +75,10 @@ M.isArray = isArray
 ---@param path string
 ---@param mode? openmode
 local function openFile(path, mode)
+	local dirName = dir.dir_name(path)
+	if dirName ~= "" then
+		assertContext("when creating " .. dirName, fs.make_dir(dirName))
+	end
 	return io.open(path, mode)
 end
 M.openFile = openFile

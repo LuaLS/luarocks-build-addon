@@ -153,6 +153,11 @@ end
 ---@param destination string
 local function copyFile(source, destination)
 	log.info("Installing " .. source .. " to " .. destination)
+
+	local dirName = dir.dir_name(destination)
+	if dirName ~= "" then
+		assertContext("when creating " .. dirName, fs.make_dir(dirName))
+	end
 	assertContext("when copying into" .. destination, fs.copy(source, destination))
 end
 
