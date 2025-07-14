@@ -26,17 +26,9 @@ end
 local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", "types", "0.1-1")
 
 ---@param path string
----@return boolean
-local function fileExists(path)
-	local attrs = lfs.attributes(path)
-	return attrs ~= nil and attrs.mode == "file"
-end
-
----@param path string
----@return boolean
-local function folderExists(path)
-	local attrs = lfs.attributes(path)
-	return attrs ~= nil and attrs.mode == "directory"
+---@return string? mode
+local function mode(path)
+	return lfs.attributes(path, "mode") --[[@as string?]]
 end
 
 ---@return boolean
@@ -90,13 +82,13 @@ end
 local function cleanProject(dirPaths, filePaths)
 	for _, dirPath in ipairs(dirPaths) do
 		assert(dirPath:sub(1, 1) ~= "/", "don't pass paths starting at root")
-		if folderExists(dirPath) then
+		if mode(dirPath) == "directory" then
 			rmDir(dirPath)
 		end
 	end
 	for _, filePath in ipairs(filePaths) do
 		assert(filePath:sub(1, 1) ~= "/", "don't pass paths starting at root")
-		if fileExists(filePath) then
+		if mode(filePath) == "file" then
 			assert(os.remove(filePath))
 		end
 	end
@@ -180,15 +172,15 @@ describe("behavior", function()
 	it(
 		"works when there is only a rockspec",
 		withProject("rockspec-only", function()
-			assert.is_true(folderExists(INSTALL_DIR))
-			assert.is_false(fileExists(".luarc.json"))
+			assert.are_equal("directory", mode(INSTALL_DIR))
+			assert.is_nil(mode(".luarc.json"))
 		end)
 	)
 
 	it(
 		"works when there is a library included",
 		withProject("with-lib", function()
-			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
+			assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
@@ -199,7 +191,7 @@ describe("behavior", function()
 	it(
 		"works when there is a config included",
 		withProject("with-config", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				example = true,
@@ -210,7 +202,7 @@ describe("behavior", function()
 	it(
 		"works when there is a plugin included",
 		withProject("with-plugin", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
@@ -221,8 +213,8 @@ describe("behavior", function()
 	it(
 		"works when there is a library and config included",
 		withProject("with-lib-config", function()
-			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
-			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
+			assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
@@ -234,8 +226,8 @@ describe("behavior", function()
 	it(
 		"works when there is a library and plugin included",
 		withProject("with-lib-plugin", function()
-			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
-			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
@@ -247,8 +239,8 @@ describe("behavior", function()
 	it(
 		"works when there is a config and plugin included",
 		withProject("with-config-plugin", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
-			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				example = true,
@@ -260,9 +252,9 @@ describe("behavior", function()
 	it(
 		"works when there is a library, config, and plugin included",
 		withProject("with-lib-config-plugin", function()
-			assert.is_true(folderExists(path(INSTALL_DIR, "library")))
-			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
-			assert.is_true(fileExists(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
@@ -275,7 +267,7 @@ describe("behavior", function()
 	it(
 		"overwrites existing .luarc.json",
 		withProject("with-config-luarc", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				completion = {
@@ -290,8 +282,8 @@ describe("behavior", function()
 	it(
 		"overwrites existing .vscode/settings.json",
 		withProject("with-config-vsc-settings", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
-			assert.is_false(fileExists(".luarc.json"))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
+			assert.is_nil(mode(".luarc.json"))
 			local settings = json.read(path(".vscode", "settings.json"))
 			assert.are_same({
 				["Lua.completion.autoRequire"] = false,
@@ -303,7 +295,7 @@ describe("behavior", function()
 	it(
 		"overwrites .luarc.json and not .vscode/settings.json when former exists",
 		withProject("with-config-luarc-vsc-settings", function()
-			assert.is_true(fileExists(path(INSTALL_DIR, "config.json")))
+			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				completion = { autoRequire = false },
@@ -361,9 +353,9 @@ describe("behavior", function()
 			cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json" })
 		end)
 		makeProject(true)
-		assert.is_false(folderExists(path(INSTALL_DIR, "library")))
-		assert.is_false(fileExists(path(INSTALL_DIR, ".luarc.json")))
-		assert.is_false(fileExists(path(INSTALL_DIR, "config.json")))
-		assert.is_false(fileExists(path(INSTALL_DIR, "plugin.lua")))
+		assert.is_nil(mode(path(INSTALL_DIR, "library")))
+		assert.is_nil(mode(path(INSTALL_DIR, ".luarc.json")))
+		assert.is_nil(mode(path(INSTALL_DIR, "config.json")))
+		assert.is_nil(mode(path(INSTALL_DIR, "plugin.lua")))
 	end)
 end)
