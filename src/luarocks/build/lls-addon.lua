@@ -156,7 +156,7 @@ local function copyFile(source, destination)
 
 	local dirName = dir.dir_name(destination)
 	if dirName ~= "" then
-		assertContext("when creating " .. dirName, fs.make_dir(dirName))
+		assertContext("when creating intermediate folders for " .. destination, fs.make_dir(dirName))
 	end
 	assertContext("when copying into" .. destination, fs.copy(source, destination))
 end
@@ -166,7 +166,7 @@ end
 local function copyDirectory(source, destination)
 	log.info("Installing " .. source .. " to " .. destination)
 
-	assertContext("when creating " .. destination, fs.make_dir(destination))
+	assertContext("when creating intermediate folders for " .. destination, fs.make_dir(destination))
 	assertContext("when copying files into " .. destination, fs.copy_contents(source, destination))
 end
 

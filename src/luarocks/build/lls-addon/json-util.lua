@@ -75,9 +75,11 @@ M.isArray = isArray
 ---@param path string
 ---@param mode? openmode
 local function openFile(path, mode)
-	local dirName = dir.dir_name(path)
-	if dirName ~= "" then
-		assertContext("when creating " .. dirName, fs.make_dir(dirName))
+	if mode and string.match(mode, "w") then
+		local dirName = dir.dir_name(path)
+		if dirName ~= "" then
+			assertContext("when creating intermediate folders for " .. path, fs.make_dir(dirName))
+		end
 	end
 	return io.open(path, mode)
 end
