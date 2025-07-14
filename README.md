@@ -100,7 +100,8 @@ luarocks --local --lua-version=5.4 make
 ## Testing
 
 ```sh
-# the build fails if this is not set to 5.4, I don't know why
+# LuaRocks expects all its source code (which includes this addon) to be
+# written for Lua 5.4.
 mkdir .luarocks
 echo 'return "5.4"' > .luarocks/default-lua-version.lua
 luarocks test
