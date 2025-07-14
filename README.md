@@ -15,7 +15,7 @@ Users can also browse addons online from https://luarocks.org/m/luacats.
 
 ### Variables
 
-You can change the behavior of the installer by defining these variables in a `config-5.X.lua` file or on the command-line as `luarocks VAR=VALUE -- ...`
+You can change the behavior of the installer by defining these variables in a `config-5.X.lua` file or on the command-line as `luarocks VAR=VALUE -- ...`. See the [config file format](https://github.com/luarocks/luarocks/blob/main/docs/config_file_format.md#variables) for more information.
 
 > [!NOTE]
 > The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system.
