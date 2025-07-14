@@ -31,6 +31,50 @@ local function mode(path)
 	return lfs.attributes(path, "mode") --[[@as string?]]
 end
 
+local rmDir
+do
+	local function rmDirHelper(dirPath)
+		for name in lfs.dir(dirPath) do
+			if name ~= "." and name ~= ".." then
+				local subPath = path(dirPath, name)
+				local mode = lfs.attributes(subPath, "mode")
+				if mode == "file" then
+					assert(os.remove(subPath))
+				elseif mode == "directory" then
+					rmDir(subPath)
+				end
+			end
+		end
+		assert(lfs.rmdir(dirPath))
+	end
+
+	---@param dirPath string
+	function rmDir(dirPath)
+		assert(dirPath:sub(1, 1) ~= "/", "don't pass paths starting at root")
+		rmDirHelper(dirPath)
+	end
+end
+
+---@param dirPath string
+local function tryRmDir(dirPath)
+	if mode(dirPath) == "directory" then
+		rmDir(dirPath)
+	end
+end
+
+---@param filePath string
+local function rmFile(filePath)
+	assert(filePath:sub(1, 1) ~= "/", "don't pass paths starting at root")
+	assert(os.remove(filePath))
+end
+
+---@param filePath string
+local function tryRmFile(filePath)
+	if mode(filePath) == "file" then
+		rmFile(filePath)
+	end
+end
+
 ---@return boolean
 local function tryCopyLuarc()
 	local baseLuarc = io.open("base.luarc.json", "r")
@@ -57,45 +101,19 @@ local function tryCopySettings()
 	assert(baseSettings:close())
 	local settings = assert(io.open(path(".vscode", "settings.json"), "w")) --[[@as file*]]
 	assert(settings:write(contents))
+	finally(function()
+		rmFile(path(".vscode", "settings.json"))
+	end)
 	assert(settings:close())
 	return true
 end
 
----@param dirPath string
-local function rmDir(dirPath)
-	for name in lfs.dir(dirPath) do
-		if name ~= "." and name ~= ".." then
-			local subPath = path(dirPath, name)
-			local mode = lfs.attributes(subPath, "mode")
-			if mode == "file" then
-				assert(os.remove(subPath))
-			elseif mode == "directory" then
-				rmDir(subPath)
-			end
-		end
-	end
-	assert(lfs.rmdir(dirPath))
-end
+---@class lls-addon.spec.makeProject.options
+---@field noInstall? boolean
 
----@param dirPaths string[]
----@param filePaths string[]
-local function cleanProject(dirPaths, filePaths)
-	for _, dirPath in ipairs(dirPaths) do
-		assert(dirPath:sub(1, 1) ~= "/", "don't pass paths starting at root")
-		if mode(dirPath) == "directory" then
-			rmDir(dirPath)
-		end
-	end
-	for _, filePath in ipairs(filePaths) do
-		assert(filePath:sub(1, 1) ~= "/", "don't pass paths starting at root")
-		if mode(filePath) == "file" then
-			assert(os.remove(filePath))
-		end
-	end
-end
-
----@param noInstall? boolean
-local function makeProject(noInstall)
+---@param options? lls-addon.spec.makeProject.options
+local function makeProject(options)
+	options = options or {}
 	tryCopyLuarc()
 	tryCopySettings()
 	local lock = assert(luarocks.fs.lock_access(luarocks.fs.current_dir()))
@@ -109,12 +127,14 @@ local function makeProject(noInstall)
 
 	assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
 	luarocks.path.use_tree(path(luarocks.fs.current_dir(), "lua_modules"))
-	luarocks.cfg.no_install = noInstall
-	assert(luarocks.cmd.make.command({ no_install = noInstall }))
-	mock.revert(logMock)
+	luarocks.cfg.no_install = options.noInstall
 	finally(function()
-		cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json", path(".vscode", "settings.json") })
+		rmDir(".luarocks")
+		rmDir("lua_modules")
+		tryRmFile(".luarc.json")
 	end)
+	assert(luarocks.cmd.make.command({ no_install = options.noInstall }))
+	mock.revert(logMock)
 end
 
 local function upgradeFinally()
@@ -337,24 +357,21 @@ describe("behavior", function()
 		local dir = "with-rockspec-settings-bad-luarc"
 		upgradeFinally()
 		pushDir(dir)
-		finally(function()
-			cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json" })
-		end)
+
 		assert.error(function()
 			makeProject()
+			finally(function()
+				rmFile(".luarc.json")
+			end)
 		end)
 	end)
 
 	it("doesn't install when given --no-install", function()
-		local dir = "no-install"
 		upgradeFinally()
-		pushDir(dir)
-		finally(function()
-			cleanProject({ ".luarocks", "lua_modules" }, { ".luarc.json" })
-		end)
-		makeProject(true)
+		pushDir("no-install")
+		makeProject({ noInstall = true })
 		assert.is_nil(mode(path(INSTALL_DIR, "library")))
-		assert.is_nil(mode(path(INSTALL_DIR, ".luarc.json")))
+		assert.is_nil(mode(".luarc.json"))
 		assert.is_nil(mode(path(INSTALL_DIR, "config.json")))
 		assert.is_nil(mode(path(INSTALL_DIR, "plugin.lua")))
 	end)
