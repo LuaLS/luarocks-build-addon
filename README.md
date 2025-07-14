@@ -20,7 +20,7 @@ You can change the behavior of the installer by defining these variables in a `c
 > [!NOTE]
 > The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system.
 
--   **LLSADDON_LUARCPATH** (`;`-separated paths)`- a list of paths indicating which`.luarc.json`-style files to modify when installing the addon.
+-   **LLSADDON_LUARCPATH** (`;`-separated paths) - a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
 -   **LLSADDON_VSCSETTINGSPATH** (`;`-separated paths) - a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon.
     -   If at least one of the above variables is set to `""` or `";"` and the other is unset, no config files will be modified by the build process.
 -   **LLSADDON_ABSPATH** (boolean) - If defined as none of `"false"`, `"no"`, `"off"` or `"0"`, indicates any paths added to the config file should be absolute paths, rather than relative ones.
