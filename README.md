@@ -2,7 +2,7 @@
 
 A LuaRocks addon for installing [lua-language-server](https://github.com/LuaLS/lua-language-server) addons from a LuaRocks repository.
 
-## Usage for End-users
+## Usage for End-Users
 
 End-users can manage addon installations using the LuaRocks CLI.
 
