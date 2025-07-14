@@ -38,7 +38,7 @@ build = {
 }
 ```
 
-Addons can be developed in a similar way to any other LuaRock. Dependencies to other addons can be specified in the `dependencies` table, and general information can be found in the `description` table.
+Addons can be developed in a similar way to any other rock. Dependencies to other addons can be specified in the `dependencies` table, and general information can be written in the `description` table.
 
 ### Build Rules
 
@@ -46,7 +46,7 @@ Addons can be developed in a similar way to any other LuaRock. Dependencies to o
 
 ### Example
 
-Here is an example for [carsakiller's CC Tweaked type definitions](https://gitlab.com/carsakiller/cc-tweaked-documentation):
+Here is an example rockspec for [carsakiller's CC Tweaked type definitions](https://gitlab.com/carsakiller/cc-tweaked-documentation):
 
 ```lua
 -- ./cats-cc-tweaked-1.0.0-1.rockspec
@@ -82,13 +82,18 @@ build = {
 ## Building
 
 ```sh
+# clone the repository
 git clone https://github.com/LuaLS/luarocks-build-addon luarocks-build-lls-addon
 cd luarocks-build-lls-addon
 
-# Installs the current source as a rock in the nearest rocks directory
-luarocks make
+# create a project-scoped rocks directory
+luarocks init
 
-# If you want to test this build with another addon on your system, run this
+# install the current source in the nearest rocks directory
+luarocks --lua-version=5.4 make
+
+# install the current source in the user's rocks directory
+# helpful for installing local addons as rocks
 luarocks --local --lua-version=5.4 make
 ```
 
@@ -102,5 +107,5 @@ luarocks test
 
 # report coverage
 luarocks test -- -c
-./lua_modules/bin/luacov -r html && ./luacov.report.html
+./luacov.report.html
 ```
