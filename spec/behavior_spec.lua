@@ -354,9 +354,8 @@ describe("behavior", function()
 	)
 
 	it("errors when given a bad luarc", function()
-		local dir = "with-rockspec-settings-bad-luarc"
 		upgradeFinally()
-		pushDir(dir)
+		pushDir("with-rockspec-settings-bad-luarc")
 
 		assert.error(function()
 			makeProject()
@@ -374,5 +373,26 @@ describe("behavior", function()
 		assert.is_nil(mode(".luarc.json"))
 		assert.is_nil(mode(path(INSTALL_DIR, "config.json")))
 		assert.is_nil(mode(path(INSTALL_DIR, "plugin.lua")))
+	end)
+
+	it("installs to unique paths", function()
+		upgradeFinally()
+		pushDir("no-install")
+		luarocks.cfg.variables.LLSADDON_LUARCPATH = "some/path/luarc-settings.json;another/path/luarc-settings.json"
+		luarocks.cfg.variables.LLSADDON_VSCSETTINGSPATH =
+			"some/path/vscode-settings.json;another/path/vscode-settings.json"
+		finally(function()
+			luarocks.cfg.variables.LLSADDON_LUARCPATH = nil
+			luarocks.cfg.variables.LLSADDON_VSCSETTINGSPATH = nil
+		end)
+		makeProject()
+		finally(function()
+			tryRmDir("some")
+			tryRmDir("another")
+		end)
+		assert.are_equal("file", mode(path("some", "path", "luarc-settings.json")))
+		assert.are_equal("file", mode(path("another", "path", "luarc-settings.json")))
+		assert.are_equal("file", mode(path("some", "path", "vscode-settings.json")))
+		assert.are_equal("file", mode(path("another", "path", "vscode-settings.json")))
 	end)
 end)
