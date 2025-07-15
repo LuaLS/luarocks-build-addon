@@ -31,7 +31,7 @@ Addon developers should use a similar [addon file structure](https://luals.githu
 
 The `config.json` file is considered deprecated when used with this installer. The `words` and `files` fields will not be read, and the `settings` field is superceded by the rockspec's `build.settings` field.
 
-Addon developers can define their addon using a rockspec file with the following block:
+A rockspec file should be included with the following block:
 
 ```lua
 build = {
