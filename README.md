@@ -6,9 +6,9 @@ A module for installing [lua-language-server](https://github.com/LuaLS/lua-langu
 
 End-users can manage addon installations using the LuaRocks CLI.
 
--   `luarocks install package-name` - add an addon named `package-name`
--   `luarocks remove package-name` - remove an addon named `package-name`
--   `luarocks doc package-name` - view information about an addon named `package-name`
+-   `luarocks install an-addon` - install `an-addon`
+-   `luarocks remove an-addon` - remove `an-addon`
+-   `luarocks doc an-addon` - view information about `an-addon`
 -   etc.
 
 Users can also browse addons online from https://luarocks.org/m/luacats.
