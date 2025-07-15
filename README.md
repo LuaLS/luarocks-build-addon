@@ -27,7 +27,7 @@ You can change the behavior of the installer by defining these variables in a `c
 
 ## Usage for Addon Developers
 
-Addon developers should use a similar [addon file structure](https://luals.github.io/wiki/addons/#addon-anatomy) as an old-style addon, except the `config.json` can optionally be replaced with a rockspec file.
+Addon developers should use a similar [addon file structure](https://luals.github.io/wiki/addons/#addon-anatomy) as an old-style addon, except the `config.json` file is optional.
 
 Addon developers can define their addon using a rockspec file with the following block:
 
