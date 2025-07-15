@@ -64,7 +64,9 @@ source = {
 description = {
     summary = "LuaCATS annotations for CC:Tweaked",
     detailed = [[
-        This documentation covers the Lua API for ComputerCraft: Tweaked and is meant to be used with Sumneko's Lua Language Server as it uses its LuaCATS annotation system.
+        This documentation covers the Lua API for ComputerCraft: Tweaked and is
+        meant to be used with Sumneko's Lua Language Server as it uses its
+        LuaCATS annotation system.
     ]],
     homepage = "https://gitlab.com/carsakiller/cc-tweaked-documentation",
     license = "MIT",
