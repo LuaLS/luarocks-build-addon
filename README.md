@@ -23,7 +23,7 @@ You can change the behavior of the installer by defining these variables in a `c
 -   **LLSADDON_LUARCPATH** (`;`-separated paths) - a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
 -   **LLSADDON_VSCSETTINGSPATH** (`;`-separated paths) - a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon. This is useful for creating VSCode settings files if they don't exist, since `.luarc.json` usually takes priority. Set this to `.vscode/settings.json` if you want this behavior.
     -   If at least one of the above variables is set, the installer will not look for default config locations. Set at least one variable to `""` or `";"` to prohibit modifying any config files.
--   **LLSADDON_ABSPATH** (boolean) - If defined as none of `"false"`, `"no"`, `"off"` or `"0"`, indicates any paths added to the config file should be absolute paths, rather than relative ones.
+-   **LLSADDON_ABSPATH** (boolean) - If set to any value _other than_ `false`, `no`, `off`, or `0`, any paths added to the config file will be absolute paths instead of relative ones.
 
 ## Usage for Addon Developers
 
