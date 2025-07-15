@@ -105,14 +105,14 @@ luarocks init
 echo 'return "5.4"' > .luarocks/default-lua-version.lua
 
 # install the current source in the nearest rocks tree
-luarocks --lua-version=5.4 make
+luarocks make
 
 # install the current source in the user's rocks tree
 # helpful for testing on local addons
-luarocks --local --lua-version=5.4 make
+luarocks --local make
 
 # you can remove it from the user rocks tree with a similar command
-luarocks --local remove luarocks-build-lls-addon
+luarocks --local --lua-version=5.4 remove luarocks-build-lls-addon
 ```
 
 ## Testing
