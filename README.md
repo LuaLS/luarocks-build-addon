@@ -100,20 +100,29 @@ cd luarocks-build-lls-addon
 # create a project-scoped rocks tree
 luarocks init
 
+# LuaRocks expects all its source code (which includes this addon) to be
+# written for Lua 5.4.
+echo 'return "5.4"' > .luarocks/default-lua-version.lua
+
 # install the current source in the nearest rocks tree
 luarocks --lua-version=5.4 make
 
 # install the current source in the user's rocks tree
 # helpful for testing on local addons
 luarocks --local --lua-version=5.4 make
+
+# you can remove it from the user rocks tree with a similar command
+luarocks --local remove luarocks-build-lls-addon
 ```
 
 ## Testing
 
 ```sh
+# create a project-scoped rocks tree
+luarocks init
+
 # LuaRocks expects all its source code (which includes this addon) to be
 # written for Lua 5.4.
-mkdir .luarocks
 echo 'return "5.4"' > .luarocks/default-lua-version.lua
 luarocks test
 
