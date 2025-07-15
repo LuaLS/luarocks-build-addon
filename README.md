@@ -40,7 +40,7 @@ build = {
 }
 ```
 
-Addons can be developed in a similar way to any other rock. Dependencies to other addons can be specified in the `dependencies` table, and general information can be written in the `description` table.
+Addons can be developed in a similar way to any other rock. Dependencies to other addons can be specified in the [`dependencies`](https://github.com/luarocks/luarocks/blob/main/docs/rockspec_format.md#dependency-information) table, and general information can be written in the [`description`](https://github.com/luarocks/luarocks/blob/main/docs/rockspec_format.md#package-metadata) table.
 
 ### Build Rules
 
