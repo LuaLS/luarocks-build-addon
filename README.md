@@ -1,6 +1,6 @@
 # `luarocks-build-lls-addon`
 
-A backend for installing [lua-language-server](https://github.com/LuaLS/lua-language-server) addons from a LuaRocks repository.
+A build backend for installing [lua-language-server](https://github.com/LuaLS/lua-language-server) addons from LuaRocks.
 
 ## Usage for End-Users
 
