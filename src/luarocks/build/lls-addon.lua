@@ -10,11 +10,15 @@ local tableUtil = require("luarocks.build.lls-addon.table-util")
 local extend = tableUtil.extend
 local unnest2 = tableUtil.unnest2
 
-local M = {}
-
 local DIR_SEP = string.sub(package.config, 1, 1)
 local PATH_SEP = string.sub(package.config, 3, 3)
 local PATH_SEP_PATTERN = "[^%" .. PATH_SEP .. "]+"
+local ERROR_MESSAGE = [[
+An error occurred while running the lls-addon backend.
+Please file an issue at https://github.com/LuaLS/luarocks-build-addon/issues
+%s]]
+
+local M = {}
 
 local FALSY_STRINGS = {
 	["false"] = true,
@@ -391,7 +395,7 @@ function M.run(rockspec, noInstall)
 			return false, match
 		else
 			-- luacov: disable
-			error(msg)
+			error(string.format(ERROR_MESSAGE, msg))
 			-- luacov: enable
 		end
 	end
