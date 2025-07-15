@@ -49,9 +49,9 @@ Addons can be developed in a similar way to any other rock. Dependencies to othe
 Here is an example rockspec for [carsakiller's CC:Tweaked type definitions](https://gitlab.com/carsakiller/cc-tweaked-documentation):
 
 ```lua
--- ./cats-cc-tweaked-1.0.0-1.rockspec
+-- ./luacats-cc-tweaked-1.0.0-1.rockspec
 rockspec_format = "3.0"
-package = "cats-cc-tweaked"
+package = "luacats-cc-tweaked"
 version = "1.0.0-1"
 source = {
     url = "git+https://gitlab.com/carsakiller/cc-tweaked-documentation.git",
