@@ -216,9 +216,7 @@ describe("behavior", function()
 		withProject("with-config", function()
 			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
 			local luarc = json.read(".luarc.json")
-			assert.are_same({
-				example = true,
-			}, luarc)
+			assert.are_same({ example = true }, luarc)
 		end)
 	)
 
