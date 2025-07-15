@@ -21,7 +21,7 @@ Users can also browse addons online from https://luarocks.org/m/luacats.
 You can change the behavior of the installer by defining these variables in a `config-5.X.lua` file or on the command-line as `luarocks VAR=VALUE -- ...`. See the [config file format](https://github.com/luarocks/luarocks/blob/main/docs/config_file_format.md#variables) for more information.
 
 > [!NOTE]
-> The path separator used in these examples is `;`, but may change based on `package.config`, a.k.a. the operating system.
+> The path separator used in these examples is `;`, but may change based on the operating system.
 
 -   **LLSADDON_LUARCPATH** (`;`-separated paths) - a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
 -   **LLSADDON_VSCSETTINGSPATH** (`;`-separated paths) - a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon. This is useful for creating VSCode settings files if they don't exist, since `.luarc.json` usually takes priority. Set this to `.vscode/settings.json` if you want this behavior.
