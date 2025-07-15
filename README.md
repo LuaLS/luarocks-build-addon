@@ -4,6 +4,9 @@ A module for installing [lua-language-server](https://github.com/LuaLS/lua-langu
 
 ## Usage for End-Users
 
+> [!NOTE]
+> End-users do not need to install `luarocks-build-lls-addon`. That will be done automatically when installing an addon for the first time.
+
 End-users can manage addon installations using the LuaRocks CLI.
 
 -   `luarocks install an-addon` - install `an-addon`
