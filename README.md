@@ -95,7 +95,7 @@ luarocks init
 luarocks --lua-version=5.4 make
 
 # install the current source in the user's rocks tree
-# helpful for installing local addons as rocks
+# helpful for testing on local addons
 luarocks --local --lua-version=5.4 make
 ```
 
