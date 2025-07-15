@@ -86,13 +86,13 @@ build = {
 git clone https://github.com/LuaLS/luarocks-build-addon luarocks-build-lls-addon
 cd luarocks-build-lls-addon
 
-# create a project-scoped rocks directory
+# create a project-scoped rocks tree
 luarocks init
 
-# install the current source in the nearest rocks directory
+# install the current source in the nearest rocks tree
 luarocks --lua-version=5.4 make
 
-# install the current source in the user's rocks directory
+# install the current source in the user's rocks tree
 # helpful for installing local addons as rocks
 luarocks --local --lua-version=5.4 make
 ```
