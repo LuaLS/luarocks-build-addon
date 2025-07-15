@@ -178,16 +178,19 @@ local function withProject(dir, handler)
 end
 
 describe("behavior", function()
-	local cd = assert(lfs.currentdir())
-	lazy_setup(function()
-		luarocks.cfg.init()
-		luarocks.fs.init()
-		assert(lfs.chdir(path("spec", "projects")))
-	end)
+	do
+		local cd
+		lazy_setup(function()
+			luarocks.cfg.init()
+			luarocks.fs.init()
+			cd = assert(lfs.currentdir())
+			assert(lfs.chdir(path("spec", "projects")))
+		end)
 
-	lazy_teardown(function()
-		assert(lfs.chdir(cd))
-	end)
+		lazy_teardown(function()
+			assert(lfs.chdir(cd))
+		end)
+	end
 
 	it(
 		"works when there is only a rockspec",
