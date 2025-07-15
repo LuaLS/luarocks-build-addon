@@ -67,6 +67,11 @@ description = {
     homepage = "https://gitlab.com/carsakiller/cc-tweaked-documentation",
     license = "MIT",
 }
+
+-- CC:Tweaked has no actual dependencies
+dependencies = {
+    "luacats-luafilesystem ~> 1",
+}
 build = {
     type = "lls-addon",
     settings = {
