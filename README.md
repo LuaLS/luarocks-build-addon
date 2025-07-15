@@ -42,7 +42,7 @@ Addons can be developed in a similar way to any other rock. Dependencies to othe
 
 ### Build Rules
 
--   **build.settings** (table) - Contains a key-value dictionary of [settings](https://luals.github.io/wiki/settings/) to be merged into the LuaLS configuration. The `config.json` file will be ignored if this entry exists.
+-   **build.settings** (table?) - May contain a key-value dictionary of [settings](https://luals.github.io/wiki/settings/) to be merged into the LuaLS configuration. The `config.json` file will be ignored if this entry exists.
 
 ### Example
 
