@@ -55,10 +55,12 @@ Here is an example rockspec for [carsakiller's CC:Tweaked type definitions](http
 rockspec_format = "3.0"
 package = "luacats-cc-tweaked"
 version = "1.0.0-1"
+
 source = {
     url = "git+https://gitlab.com/carsakiller/cc-tweaked-documentation.git",
     branch = "luarocks-build", -- this branch does not actually exist
 }
+
 description = {
     summary = "LuaCATS annotations for CC:Tweaked",
     detailed = [[
@@ -68,10 +70,10 @@ description = {
     license = "MIT",
 }
 
--- CC:Tweaked has no actual dependencies
-dependencies = {
+dependencies = { -- CC:Tweaked has no actual dependencies
     "luacats-luafilesystem ~> 1",
 }
+
 build = {
     type = "lls-addon",
     settings = {
