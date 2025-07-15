@@ -40,7 +40,7 @@ end
 ---@param pathsString string?
 ---@return string[]? paths
 local function parsePathList(pathsString)
-	if not pathsString then
+	if pathsString == nil or pathsString == "" then
 		return nil
 	end
 
