@@ -73,7 +73,7 @@ description = {
 }
 
 dependencies = { -- CC:Tweaked has no actual dependencies
-    "luacats-luafilesystem ~> 1",
+    "luacats-luafilesystem ~> 1.8",
 }
 
 build = {
