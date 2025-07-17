@@ -13,10 +13,6 @@ local unnest2 = tableUtil.unnest2
 local DIR_SEP = string.sub(package.config, 1, 1)
 local PATH_SEP = string.sub(package.config, 3, 3)
 local PATH_SEP_PATTERN = "[^%" .. PATH_SEP .. "]+"
-local ERROR_MESSAGE = [[
-An error occurred while running the lls-addon backend.
-Please file an issue at https://github.com/LuaLS/luarocks-build-addon/issues
-%s]]
 
 local M = {}
 
@@ -375,6 +371,11 @@ local function installAddon(rockspec, env, noInstall)
 end
 M.installAddon = installAddon
 
+local CRASH_MESSAGE = [[
+An error occurred while running the lls-addon backend.
+Please file an issue at https://github.com/LuaLS/luarocks-build-addon/issues
+]]
+
 ---@param rockspec luarocks.rockspec
 ---@param noInstall boolean
 ---@return boolean, string?
@@ -395,7 +396,7 @@ function M.run(rockspec, noInstall)
 			return false, match
 		else
 			-- luacov: disable
-			error(string.format(ERROR_MESSAGE, msg))
+			error(CRASH_MESSAGE .. msg)
 			-- luacov: enable
 		end
 	end
