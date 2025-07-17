@@ -113,7 +113,7 @@ local function copyConfigSettings(sourcePath, luarc)
 	local config = json.read(sourcePath)
 
 	if not json.isObject(config) then
-		error("[BuildError]: root of " .. sourcePath .. " is not an object. File an issue with the addon developer.")
+		error("[BuildError]: root of " .. sourcePath .. " is not an object. Submit an issue to the addon developer.")
 	end
 	---@cast config { [string]: any }
 
@@ -122,7 +122,7 @@ local function copyConfigSettings(sourcePath, luarc)
 		error(
 			"[BuildError]: key 'settings' of "
 				.. sourcePath
-				.. " is not an object. File an issue with the addon developer."
+				.. " is not an object. Submit an issue to the addon developer."
 		)
 	end
 	---@cast settings { [string]: any }
@@ -142,7 +142,7 @@ end
 local function copyBuildSettings(settings, luarc)
 	settings = json.coerce(settings)
 	if not json.isObject(settings) then
-		error("[BuildError]: 'rockspec.build.settings' is not an object. File an issue with the addon developer.")
+		error("[BuildError]: 'rockspec.build.settings' is not an object. Submit an issue to the addon developer.")
 	end
 
 	log.info("Merging 'rockspec.build.settings' into .luarc.json")
@@ -373,7 +373,7 @@ M.installAddon = installAddon
 
 local CRASH_MESSAGE = [[
 An error occurred while running the lls-addon backend.
-Please file an issue at https://github.com/LuaLS/luarocks-build-addon/issues
+Please submit an issue at https://github.com/LuaLS/luarocks-build-addon/issues
 ]]
 
 ---@param rockspec luarocks.rockspec
