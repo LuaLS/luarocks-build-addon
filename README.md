@@ -2,6 +2,16 @@
 
 A build backend for installing [lua-language-server](https://github.com/LuaLS/lua-language-server) addons from LuaRocks.
 
+Its effects are as follows:
+
+-   Compile a "patch" that describes what settings will be added to LuaLS config files.
+    -   paths can be customized
+-   Look for LuaLS config files in the project directory by default, prioritizing `./.luarc.json`, then looking for a `./.vscode/settings.json`, and defaulting to creating a new `.luarc.json` otherwise.
+    -   can be customized
+-   If the `--no-install` option is given, processing stops here.
+-   Apply the "patch" into every discovered file. File entries may be overwritten
+-   Install any other assets (`library/` and `plugin.lua`)
+
 ## Usage for End-Users
 
 > [!NOTE]
@@ -11,7 +21,7 @@ End-users can manage addon installations using the LuaRocks CLI.
 
 -   `luarocks install an-addon` - install `an-addon`
 -   `luarocks remove an-addon` - remove `an-addon`
--   `luarocks doc an-addon` - view information about `an-addon`
+-   `luarocks show an-addon` - view information about `an-addon`
 -   etc.
 
 Users can also browse addons online from https://luarocks.org/m/luacats.
