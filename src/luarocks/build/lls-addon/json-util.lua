@@ -95,7 +95,7 @@ end
 
 ---gets all keys from a json object
 ---@param keyorder string[]
----@param obj { [string]: any }
+---@param obj any
 local function getRecursiveKeys(keyorder, obj)
 	if isObject(obj) then
 		for k, v in pairs(obj) do
