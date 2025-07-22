@@ -37,11 +37,21 @@ You can change the behavior of the installer by defining these variables in a `c
 
 ## Usage for Addon Developers
 
-Addon developers should use a similar [addon file structure](https://luals.github.io/wiki/addons/#addon-anatomy) as an old-style addon.
+Addon developers should use an addon file structure like this:
+
+```sh
+.
+├── [addon name]-[version]-[revision].rockspec  # required
+├── library/     # optional
+├── plugin.lua   # optional
+└── config.json  # deprecated
+```
+
+See the [Creating an Addon](https://luals.github.io/wiki/addons/#creating-an-addon) section for more information on the individual components.
 
 The `config.json` file is considered deprecated when used with this installer. The `words` and `files` fields will not be read, and the `settings` field is superceded by the rockspec's `build.settings` field.
 
-A rockspec file should be included with the following block:
+A `.rockspec` file should be included with the following block:
 
 ```lua
 build = {
