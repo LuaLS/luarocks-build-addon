@@ -118,7 +118,7 @@ end
 ---@param value any
 ---@param opt? lls-addon.json-util.write-options
 function M.write(destinationPath, value, opt)
-	local options = { indent = 2 }
+	local options = { indent = true }
 
 	if opt then
 		if opt.sortKeys then
