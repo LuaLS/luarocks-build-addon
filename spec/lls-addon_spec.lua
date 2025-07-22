@@ -365,14 +365,48 @@ describe("lls-addon", function()
 			assert.contains({ type = "vscode settings", path = path("fake", "another.json") }, files)
 		end)
 
-		it("does not look in projectDir if environment variables are defined and empty", function()
+		it("looks in projectDir if environment variables are defined and empty", function()
 			stubFs({
 				current_dir = currentDir,
 				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = "", LUARCPATH = "" })
-			assert.are_same({}, files)
+			assert.are_equal(1, #files)
+			assert.contains({ type = "luarc", path = path(currentDir, ".luarc.json") }, files)
+		end)
+
+		it("looks in projectDir if environment variables are defined and empty", function()
+			stubFs({
+				current_dir = currentDir,
+				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+			})
+
+			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = "", LUARCPATH = "" })
+			assert.are_equal(1, #files)
+			assert.contains({ type = "luarc", path = path(currentDir, ".luarc.json") }, files)
+		end)
+
+		it("looks in projectDir if only VSCSETTINGSPATH is defined and empty", function()
+			stubFs({
+				current_dir = currentDir,
+				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+			})
+
+			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = "" })
+			assert.are_equal(1, #files)
+			assert.contains({ type = "luarc", path = path(currentDir, ".luarc.json") }, files)
+		end)
+
+		it("looks in projectDir if only LUARCPATH is defined and empty", function()
+			stubFs({
+				current_dir = currentDir,
+				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+			})
+
+			local files = findLuarcFiles(currentDir, { LUARCPATH = "" })
+			assert.are_equal(1, #files)
+			assert.contains({ type = "luarc", path = path(currentDir, ".luarc.json") }, files)
 		end)
 
 		it("does not look in projectDir if environment variables are defined as ';'", function()
@@ -385,23 +419,23 @@ describe("lls-addon", function()
 			assert.are_same({}, files)
 		end)
 
-		it("does not look in projectDir if only VSCSETTINGSPATH is defined", function()
+		it("does not look in projectDir if only VSCSETTINGSPATH is defined as ';'", function()
 			stubFs({
 				current_dir = currentDir,
 				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
-			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = "" })
+			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = ";" })
 			assert.are_same({}, files)
 		end)
 
-		it("does not look in projectDir if only LUARCPATH is defined", function()
+		it("does not look in projectDir if only LUARCPATH is defined as ';'", function()
 			stubFs({
 				current_dir = currentDir,
 				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
-			local files = findLuarcFiles(currentDir, { LUARCPATH = "" })
+			local files = findLuarcFiles(currentDir, { LUARCPATH = ";" })
 			assert.are_same({}, files)
 		end)
 	end)
