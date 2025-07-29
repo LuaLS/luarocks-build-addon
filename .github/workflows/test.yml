@@ -1,0 +1,34 @@
+name: Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Lua
+        uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: "5.4.8"
+
+      - name: Set up LuaRocks
+        uses: leafo/gh-actions-luarocks@v5
+
+      - name: Install LuaCov
+        run: luarocks install LuaCov
+
+      - name: Run Test Suite
+        run: luarocks test -- -c -o TAP
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: luacov-report-${{ github.sha }}.html
+          path: ./luacov.report.html
