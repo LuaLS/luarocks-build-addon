@@ -9,7 +9,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-    contents: write
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
         run: luarocks pack *.rockspec
 
       - name: Publish to LuaRocks
-        run: luarocks upload --api-key=${{ secrets.LUAROCKS_API_KEY } *.rockspec
+        run: luarocks upload --api-key=${ secrets.LUAROCKS_API_KEY } *.rockspec
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
