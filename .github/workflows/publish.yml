@@ -23,7 +23,7 @@ jobs:
         uses: leafo/gh-actions-luarocks@v5
 
       - name: Pack Rock
-        run: luarocks pack
+        run: luarocks pack *.rockspec
 
       - name: Publish to LuaRocks
         run: luarocks upload --api-key=${{ secrets.LUAROCKS_API_KEY } *.rockspec
