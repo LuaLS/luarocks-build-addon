@@ -1,6 +1,6 @@
 rockspec_format = "3.0"
 package = "luarocks-build-lls-addon"
-version = "0.1-1"
+version = "dev-1"
 source = {
 	url = "git+https://github.com/LuaLS/luarocks-build-addon.git",
 }
