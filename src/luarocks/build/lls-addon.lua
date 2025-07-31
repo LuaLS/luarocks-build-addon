@@ -158,7 +158,7 @@ local function copyFile(source, destination)
 	if dirName ~= "" then
 		assertContext("when creating intermediate folders for " .. destination, fs.make_dir(dirName))
 	end
-	assertContext("when copying into" .. destination, fs.copy(source, destination))
+	assertContext("when copying into " .. destination, fs.copy(source, destination))
 end
 
 ---@param source string
@@ -175,6 +175,8 @@ end
 ---@field source string
 ---@field destination string
 
+---copies any files and directories listed in `installEntries`
+---@param installEntries lls-addon.install-entry[]
 local function installFiles(installEntries)
 	for _, entry in ipairs(installEntries) do
 		local type = entry.type
@@ -192,6 +194,8 @@ local function installFiles(installEntries)
 	end
 end
 
+---creates a "diffed" .luarc.json configuration that represents all the changes
+---to apply to the user's configuration files
 ---@param installDir string
 ---@param rockspecSettings unknown
 ---@return { [string]: any }? luarc
