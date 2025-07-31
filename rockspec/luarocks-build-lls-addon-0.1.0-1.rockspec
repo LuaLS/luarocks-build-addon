@@ -3,7 +3,7 @@ package = "luarocks-build-lls-addon"
 version = "0.1.0-1"
 source = {
 	url = "git+https://github.com/LuaLS/luarocks-build-addon.git",
-	tag = "v0.1.0",
+	tag = "v0.1.0-1",
 }
 description = {
 	summary = "A build backend for LuaRocks that installs LuaLS addons",
