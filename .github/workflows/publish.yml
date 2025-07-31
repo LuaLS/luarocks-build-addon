@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 jobs:
   publish:
@@ -23,7 +23,10 @@ jobs:
         uses: leafo/gh-actions-luarocks@v5
 
       - name: Publish to LuaRocks
-        run: luarocks upload --api-key=${{ secrets.LUAROCKS_API_KEY }} *.rockspec
+        run: |
+          luarocks upload \
+            rockspec/luarocks-build-lls-addon-${{ github.ref_name }}.rockspec \
+            --api-key=${{ secrets.LUAROCKS_API_KEY }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
