@@ -22,13 +22,18 @@ jobs:
       - name: Set up LuaRocks
         uses: leafo/gh-actions-luarocks@v5
 
+      - name: Get Rockspec Version
+        run: |
+          [[ "${{ github.ref_name }}" =~ ^v(.+)$ ]]
+          "spec_version=${BASH_REMATCH[1]}" >> $env:GITHUB_ENV
+
       - name: Publish to LuaRocks
         run: |
           luarocks upload \
-            rockspec/luarocks-build-lls-addon-${{ github.ref_name }}.rockspec \
+            "rockspec/luarocks-build-lls-addon-${env:spec_version}.rockspec" \
             --api-key=${{ secrets.LUAROCKS_API_KEY }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "*.src.rock"
+          files: "luarocks-build-lls-addon-${env:spec_version}.src.rock"
