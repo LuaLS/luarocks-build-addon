@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.1.0-2], [v0.1.0-3], [v0.1.0-4], [v0.1.0-5], [v0.1.0-6]
+## [v0.1.0-2], [v0.1.0-3], [v0.1.0-4], [v0.1.0-5], [v0.1.0-6], [v0.1.0-7]
 
 -   Try to fix deployment issues with rockspec and CD
 
