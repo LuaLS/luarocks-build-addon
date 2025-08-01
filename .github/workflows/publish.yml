@@ -14,24 +14,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Publish to LuaRocks
-        uses: nvim-neorocks/luarocks-tag-release@v7
-        env:
-          LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
+      - name: Set up Lua
+        uses: leafo/gh-actions-lua@v11
         with:
-          name: luarocks-build-lls-addon
-          test_dependencies: |
-            luarocks >= 3.11.1
-            busted ~> 2.2
-            luafilesystem ~> 1.8
-            inspect ~> 3.1
-            md5 ~> 1.3
-          copy_directories: ""
+          luaVersion: "5.4.8"
+
+      - name: Set up LuaRocks
+        uses: leafo/gh-actions-luarocks@v5
 
       - name: Get Rockspec Version
         run: |
           [[ "${{ github.ref_name }}" =~ ^v(.+)$ ]]
           echo "spec_version=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+
+      - name: Publish to LuaRocks
+        run: |
+          luarocks upload \
+            "rockspec/luarocks-build-lls-addon-${spec_version}.rockspec" \
+            --api-key=${{ secrets.LUAROCKS_API_KEY }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
