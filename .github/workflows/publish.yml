@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      spec_version: "" # this gets set in the Get Rockspec Version step
 
     steps:
       - uses: actions/checkout@v4
@@ -30,10 +32,10 @@ jobs:
       - name: Publish to LuaRocks
         run: |
           luarocks upload \
-            "rockspec/luarocks-build-lls-addon-${spec_version}.rockspec" \
+            "rockspec/luarocks-build-lls-addon-${{ env.spec_version }}.rockspec" \
             --api-key=${{ secrets.LUAROCKS_API_KEY }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "luarocks-build-lls-addon-${spec_version}.src.rock"
+          files: "luarocks-build-lls-addon-${{ env.spec_version }}.src.rock"
