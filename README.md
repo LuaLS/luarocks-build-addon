@@ -24,7 +24,7 @@ End-users can manage addon installations using the LuaRocks CLI.
 -   `luarocks show an-addon` - view information about `an-addon`
 -   etc.
 
-Users can also browse addons online from https://luarocks.org/m/luacats.
+Users can also browse addons online from https://luarocks.org/m/lls-addons.
 
 ### Variables
 
