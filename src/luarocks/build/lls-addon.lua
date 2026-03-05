@@ -90,18 +90,22 @@ M.getProjectDir = getProjectDir
 ---@param projectDir string
 ---@param rockspec luarocks.rockspec
 ---@param env { [string]: string? }
----@return string
+---@return string installDir, string formattedInstallDir
 local function getInstallDir(projectDir, rockspec, env)
 	local installDir = path.install_dir(rockspec.package, rockspec.version)
-	if not parseFlag(env.ABSPATH) and installDir:sub(1, #projectDir) == projectDir then
-		log.info("Making install directory relative to " .. projectDir)
-		installDir = installDir:sub(#projectDir + 1)
-		if installDir:sub(1, 1) == DIR_SEP then
-			installDir = installDir:sub(2)
-		end
+	local formattedInstallDir = installDir
+
+	if parseFlag(env.ABSPATH) or installDir:sub(1, #projectDir) ~= projectDir then
+		return installDir, formattedInstallDir
 	end
 
-	return installDir
+	log.info("Making install directory relative to " .. projectDir)
+	formattedInstallDir = formattedInstallDir:sub(#projectDir + 1)
+	if formattedInstallDir:sub(1, 1) == DIR_SEP then
+		formattedInstallDir = formattedInstallDir:sub(2)
+	end
+
+	return installDir, formattedInstallDir
 end
 M.getInstallDir = getInstallDir
 
@@ -198,19 +202,23 @@ end
 ---to apply to the user's configuration files
 ---@param installDir string
 ---@param rockspecSettings unknown
+---@param formattedInstallDir? string
 ---@return { [string]: any }? luarc
 ---@return lls-addon.install-entry[] installEntries
-local function compileLuarc(installDir, rockspecSettings)
+local function compileLuarc(installDir, rockspecSettings, formattedInstallDir)
+	formattedInstallDir = formattedInstallDir or installDir
+
 	local luarc ---@type { [string]: any }
 	local installEntries = {} ---@type lls-addon.install-entry[]
 
 	local librarySource = dir.path(fs.current_dir(), "library")
 	if fs.exists(librarySource) then
 		local libraryDestination = dir.path(installDir, "library")
+		local formattedLibraryDestination = dir.path(formattedInstallDir, "library")
 
 		luarc = luarc or json.object({})
-		log.info("Adding " .. libraryDestination .. " to 'workspace.library' of .luarc.json")
-		luarc["workspace.library"] = json.array({ libraryDestination })
+		log.info("Adding " .. formattedLibraryDestination .. " to 'workspace.library' of .luarc.json")
+		luarc["workspace.library"] = json.array({ formattedLibraryDestination })
 
 		table.insert(installEntries, {
 			type = "directory",
@@ -222,11 +230,12 @@ local function compileLuarc(installDir, rockspecSettings)
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
 	if fs.exists(pluginSource) then
 		local pluginDestination = dir.path(installDir, "plugin.lua")
+		local formattedPluginDestination = dir.path(formattedInstallDir, "plugin.lua")
 
 		-- also set 'runtime.plugin' in .luarc.json
 		luarc = luarc or json.object({})
-		log.info("Adding " .. pluginDestination .. " to 'runtime.plugin' of .luarc.json")
-		luarc["runtime.plugin"] = pluginDestination
+		log.info("Adding " .. formattedPluginDestination .. " to 'runtime.plugin' of .luarc.json")
+		luarc["runtime.plugin"] = formattedPluginDestination
 
 		table.insert(installEntries, {
 			type = "file",
@@ -354,8 +363,8 @@ local function installAddon(rockspec, env, noInstall)
 	log.info("Building addon " .. rockspec.package .. " @ " .. rockspec.version)
 
 	local projectDir = getProjectDir()
-	local installDir = getInstallDir(projectDir, rockspec, env)
-	local luarc, installEntries = compileLuarc(installDir, rockspec.build["settings"])
+	local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
+	local luarc, installEntries = compileLuarc(installDir, rockspec.build["settings"], formattedInstallDir)
 
 	if not luarc then
 		log.warn("addon has no features; no files written!")

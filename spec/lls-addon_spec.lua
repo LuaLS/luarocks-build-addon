@@ -9,6 +9,9 @@ local log = require("luarocks.build.lls-addon.log")
 
 local SEP = package.config:sub(1, 1)
 local PATH_SEP = package.config:sub(3, 3)
+
+---@param ... string | number
+---@return string
 local function path(...)
 	return table.concat({ ... }, SEP)
 end
@@ -458,13 +461,15 @@ describe("lls-addon", function()
 
 	describe("getInstallDir", function()
 		local getInstallDir = llsAddon.getInstallDir
-		it("returns a relative install dir if found", function()
+		it("returns a relative install dir if it exists", function()
 			local projectDir = path("fake", "projectDir")
 			local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
 			local stubInstallPath = stub(pathMod, "install_dir", path("fake", "projectDir", "installDir"))
+			local env = {}
 
-			local installDir = getInstallDir(projectDir, rockspec, {})
-			assert.are_equal(path("installDir"), installDir)
+			local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
+			assert.are_equal(path("fake", "projectDir", "installDir"), installDir)
+			assert.are_equal(path("installDir"), formattedInstallDir)
 			assert.stub(stubInstallPath).was.called(1)
 			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
 		end)
@@ -473,9 +478,11 @@ describe("lls-addon", function()
 			local projectDir = path("fake", "projectDir")
 			local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
 			local stubInstallPath = stub(pathMod, "install_dir", path("fake", "some", "other", "installDir"))
+			local env = {}
 
-			local installDir = getInstallDir(projectDir, rockspec, {})
+			local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
 			assert.are_equal(path("fake", "some", "other", "installDir"), installDir)
+			assert.are_equal(path("fake", "some", "other", "installDir"), formattedInstallDir)
 			assert.stub(stubInstallPath).was.called(1)
 			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
 		end)
@@ -484,21 +491,25 @@ describe("lls-addon", function()
 			local projectDir = path("fake", "projectDir")
 			local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
 			local stubInstallPath = stub(pathMod, "install_dir", path("fake", "projectDir", "installDir"))
+			local env = { ABSPATH = "true" }
 
-			local installDir = getInstallDir(projectDir, rockspec, { ABSPATH = "true" })
+			local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
 			assert.are_equal(path("fake", "projectDir", "installDir"), installDir)
+			assert.are_equal(path("fake", "projectDir", "installDir"), formattedInstallDir)
 			assert.stub(stubInstallPath).was.called(1)
 			assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
 		end)
 
 		for _, falsyString in ipairs({ "false", "no", "off", "0" }) do
-			it(string.format("returns absolute path if LLSADDON_ABSPATH is %q", falsyString), function()
+			it(string.format("returns relative path if LLSADDON_ABSPATH is %q", falsyString), function()
 				local projectDir = path("fake", "projectDir")
 				local rockspec = makeRockspec({ package = "types", version = "0.1-1" })
 				local stubInstallPath = stub(pathMod, "install_dir", path("fake", "projectDir", "installDir"))
+				local env = { ABSPATH = falsyString }
 
-				local installDir = getInstallDir(projectDir, rockspec, { ABSPATH = falsyString })
-				assert.are_equal("installDir", installDir)
+				local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
+				assert.are_equal(path("fake", "projectDir", "installDir"), installDir)
+				assert.are_equal(path("installDir"), formattedInstallDir)
 				assert.stub(stubInstallPath).was.called(1)
 				assert.stub(stubInstallPath).was.called_with("types", "0.1-1")
 			end)
