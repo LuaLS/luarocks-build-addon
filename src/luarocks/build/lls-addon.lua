@@ -61,17 +61,17 @@ end
 ---@param sourcePath string
 ---@return { [string]: any } luarc
 local function readOrCreateLuarc(sourcePath)
-	if fs.exists(sourcePath) then
-		log.info("Found " .. sourcePath)
-		local luarc = json.read(sourcePath) --[[@as { [string]: any }]]
-		if not json.isObject(luarc) then
-			error("[BuildError]: Expected root of " .. sourcePath .. " to be an object.")
-		end
-		return luarc
-	else
+	if not fs.exists(sourcePath) then
 		log.info(sourcePath .. " not found, generating a new one")
 		return json.object({})
 	end
+
+	log.info("Found " .. sourcePath)
+	local luarc = json.read(sourcePath) --[[@as { [string]: any }]]
+	if not json.isObject(luarc) then
+		error("[BuildError]: Expected root of " .. sourcePath .. " to be an object.")
+	end
+	return luarc
 end
 
 ---@return string
