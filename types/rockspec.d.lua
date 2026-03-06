@@ -1,4 +1,5 @@
 ---@class luarocks.rockspec.build
+---@field [string] any
 
 ---@class luarocks.rockspec.query
 
@@ -47,7 +48,7 @@
 ---@class luarocks.rockspec
 ---@field rockspec_format string
 ---@field name string -- not in the rockspec definition but used
----@field package string
+---@field ["package"] string
 ---@field version string
 ---@field local_abs_filename string
 ---@field rocks_provided { [string]: string }
