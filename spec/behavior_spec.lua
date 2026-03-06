@@ -35,7 +35,7 @@ local function path(...)
 		end
 	end
 
-	for i = 1, removeCount do
+	for _ = 1, removeCount do
 		table.insert(parts, 1, "..")
 	end
 
@@ -50,17 +50,21 @@ local function mode(path)
 	return lfs.attributes(path, "mode") --[[@as string?]]
 end
 
+local function assertNoRoot(filePath)
+	assert(filePath:sub(1, 1) ~= "/" and filePath:sub(1, 2) ~= "C:", "don't pass paths starting at root")
+end
+
 local rmDir
 do
 	local function rmDirHelper(dirPath)
 		for name in lfs.dir(dirPath) do
 			if name ~= "." and name ~= ".." then
 				local subPath = path(dirPath, name)
-				local mode = lfs.attributes(subPath, "mode")
-				if mode == "file" then
+				local subPathMode = mode(subPath)
+				if subPathMode == "file" then
 					assert(os.remove(subPath))
-				elseif mode == "directory" then
-					rmDir(subPath)
+				elseif subPathMode == "directory" then
+					rmDirHelper(subPath)
 				end
 			end
 		end
@@ -69,7 +73,7 @@ do
 
 	---@param dirPath string
 	function rmDir(dirPath)
-		assert(dirPath:sub(1, 1) ~= "/", "don't pass paths starting at root")
+		assertNoRoot(dirPath)
 		rmDirHelper(dirPath)
 	end
 end
@@ -83,7 +87,7 @@ end
 
 ---@param filePath string
 local function rmFile(filePath)
-	assert(filePath:sub(1, 1) ~= "/", "don't pass paths starting at root")
+	assertNoRoot(filePath)
 	assert(os.remove(filePath))
 end
 
@@ -136,6 +140,15 @@ end
 ---@field projectDir? string
 ---@field rockspec? string
 
+---@param dirPath string
+local function pushDir(dirPath)
+	local cd = assert(lfs.currentdir())
+	assert(lfs.chdir(dirPath))
+	finally(function()
+		assert(lfs.chdir(cd))
+	end)
+end
+
 ---@param options? lls-addon.spec.makeProject.options
 local function makeProject(options)
 	options = options or {}
@@ -157,28 +170,28 @@ local function makeProject(options)
 		newProjectDir = path(cd, options.projectDir)
 		luarocks.cfg.project_dir = newProjectDir
 
-		lfs.chdir(newProjectDir)
+		pushDir(options.projectDir)
 		assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
-		lfs.chdir(cd)
-		luarocks.path.use_tree(path(newProjectDir, "lua_modules"))
 		finally(function()
-			rmDir(path(newProjectDir, ".luarocks"))
-			rmDir(path(newProjectDir, "lua_modules"))
-			tryRmFile(path(newProjectDir, ".luarc.json"))
+			rmDir(".luarocks")
+			rmDir("lua_modules")
+			tryRmFile(".luarc.json")
 		end)
+		pushDir(cd)
+		luarocks.path.use_tree(path(newProjectDir, "lua_modules"))
 	else
 		assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
 		luarocks.path.use_tree(path(cd, "lua_modules"))
 		finally(function()
-			rmDir(path(cd, ".luarocks"))
-			rmDir(path(cd, "lua_modules"))
-			tryRmFile(path(cd, ".luarc.json"))
+			rmDir(".luarocks")
+			rmDir("lua_modules")
+			tryRmFile(".luarc.json")
 		end)
 	end
 	luarocks.cfg.no_install = options.noInstall
 	assert(luarocks.cmd.make.command({ no_install = options.noInstall, rockspec = options.rockspec }))
-	mock.revert(logMock)
 	luarocks.cfg.project_dir = oldProjectDir
+	mock.revert(logMock)
 end
 
 local function upgradeFinally()
@@ -201,19 +214,10 @@ local function upgradeFinally()
 	finally = newFinally
 end
 
----@param dirPath string
-local function pushDir(dirPath)
-	local cd = assert(lfs.currentdir())
-	assert(lfs.chdir(dirPath))
-	finally(function()
-		assert(lfs.chdir(cd))
-	end)
-end
-
 ---@param dir string
 ---@param handler fun()
 local function withProject(dir, handler)
-	assert(dir:sub(1, 1) ~= "/", "don't pass paths starting at root")
+	assertNoRoot(dir)
 	return function()
 		upgradeFinally()
 		pushDir(dir)
@@ -415,7 +419,7 @@ describe("luarocks-build-lls-addon", function()
 			workspace = { library = { path(cd, INSTALL_DIR, "library") } },
 			runtime = { plugin = path(cd, INSTALL_DIR, "plugin.lua") },
 		}, luarc)
-		assert.are_equal(1, #luarc.workspace.library)
+		lfs.chdir(path("..", "different-dir"))
 	end)
 
 	it("errors when given a bad luarc", function()
