@@ -11,9 +11,19 @@ jobs:
     permissions:
       contents: write
     env:
+      package_name: luarocks-build-lls-addon
       spec_version: "" # this gets set in the Get Rockspec Version step
 
     steps:
+      - name: Get Rockspec Version
+        run: |
+          if [[ "${{ github.ref_name }}" =~ ^v(.+)$ ]]; then
+            echo "spec_version=${BASH_REMATCH[1]}-1" >> $GITHUB_ENV
+          else
+            echo "rockspec version could not be matched" >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - name: Set up Lua
@@ -24,18 +34,19 @@ jobs:
       - name: Set up LuaRocks
         uses: leafo/gh-actions-luarocks@v5
 
-      - name: Get Rockspec Version
+      - name: Write LuaRocks Rockspec
         run: |
-          [[ "${{ github.ref_name }}" =~ ^v(.+)$ ]]
-          echo "spec_version=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+          luarocks new_version \
+            --tag ${{ github.ref_name }} \
+            ${{ env.package_name }}-release-1.rockspec
 
       - name: Publish to LuaRocks
         run: |
           luarocks upload \
-            "rockspec/luarocks-build-lls-addon-${{ env.spec_version }}.rockspec" \
+            "./${{ env.package_name }}-${{ env.spec_version }}.rockspec" \
             --api-key=${{ secrets.LUAROCKS_API_KEY }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "luarocks-build-lls-addon-${{ env.spec_version }}.src.rock"
+          files: "${{ env.package_name }}-${{ env.spec_version }}.src.rock"
