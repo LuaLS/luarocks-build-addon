@@ -1,5 +1,4 @@
 local lfs = require("lfs") ---@type LuaFileSystem
-local inspect = require("inspect")
 
 local luarocks = {
 	cfg = require("luarocks.core.cfg"),
