@@ -1,4 +1,4 @@
-local cfg = require("luarocks.core.cfg")
+local cfg = require("luarocks.core.cfg") ---@type luarocks.core.cfg
 local fs = require("luarocks.fs")
 local lfs = require("lfs") ---@type LuaFileSystem
 
@@ -6,12 +6,6 @@ local bundle = require("luarocks.build.lls-addon.bundle")
 local log = require("luarocks.build.lls-addon.log")
 
 local upgradeFinally = require("spec.util.upgrade-finally")
-
----@param path string
----@return string? mode
-local function mode(path)
-	return lfs.attributes(path, "mode") --[[@as string?]]
-end
 
 local function text(path)
 	local file = assert(io.open(path, "r"))
@@ -28,68 +22,53 @@ local function path(...)
 	return table.concat({ ... }, DIR_SEP)
 end
 
+---@param p string
+---@return fun(): string
+local function dir(p)
+	local iterator = lfs.dir(p)
+	return function()
+		local result = iterator:next()
+		while result == "." or result == ".." do
+			result = iterator:next()
+		end
+
+		return result
+	end
+end
+
 describe("bundle", function()
-	local logMock = mock(log, --[[doStubs:]] true)
-	lazy_setup(function()
-		cfg.init()
-		fs.init()
-		fs.change_dir(path("spec", "plugins"))
-	end)
-
-	lazy_teardown(function()
-		mock.revert(logMock)
-		fs.pop_dir()
-	end)
-
-	it("works with one plugin file", function()
-		finally = upgradeFinally(finally)
-		fs.change_dir("one")
-		finally(function()
-			fs.pop_dir()
+	do
+		local logMock ---@type luassert.mockeds
+		local cd ---@type string
+		lazy_setup(function()
+			logMock = mock(log, --[[doStubs:]] true)
+			cd = lfs.currentdir()
+			cfg.init()
+			fs.init()
+			assert(lfs.chdir(path("spec", "plugins")))
 		end)
 
-		local destination = path("destination", "compiled.lua")
-		bundle("plugin", destination)
-		finally(function()
-			os.remove(destination)
+		lazy_teardown(function()
+			mock.revert(logMock)
+			assert(lfs.chdir(cd))
 		end)
+	end
 
-		assert.are_equal("file", mode(destination))
-		assert.are_equal("-- does nothing\n", text(destination))
-	end)
+	for case in dir(path("spec", "plugins")) do
+		it("works with the plugin file at spec/plugins/" .. case .. "/", function()
+			finally = upgradeFinally(finally)
+			assert(fs.change_dir(case))
+			finally(function()
+				assert(fs.pop_dir())
+			end)
 
-	it("works with several plugin files", function()
-		finally = upgradeFinally(finally)
-		fs.change_dir("many")
-		finally(function()
-			fs.pop_dir()
+			local destination = path("destination", "compiled.lua")
+			bundle("plugin", destination)
+			finally(function()
+				os.remove(destination)
+			end)
+
+			assert.are_equal(text("expected.lua"), text(destination))
 		end)
-
-		local destination = path("destination", "compiled.lua")
-		bundle("plugin", destination)
-		finally(function()
-			os.remove(destination)
-		end)
-
-		assert.are_equal("file", mode(destination))
-
-		assert.are_equal(text("expected.lua"), text(destination))
-	end)
-
-	it("works with several plugin files that are nested", function()
-		finally = upgradeFinally(finally)
-		fs.change_dir("nested")
-		finally(function()
-			fs.pop_dir()
-		end)
-
-		local destination = path("destination", "compiled.lua")
-		bundle("plugin", destination)
-		finally(function()
-			os.remove(destination)
-		end)
-
-		assert.are_equal("file", mode(destination))
-		assert.are_equal(text("expected.lua"), text(destination))
-	end)
+	end
 end)
