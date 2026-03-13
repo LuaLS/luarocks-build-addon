@@ -28,23 +28,6 @@ local function path(...)
 	return table.concat({ ... }, DIR_SEP)
 end
 
-local expectedMany = [=[
-package.preload["plugin.another"] = assert(load([[
-return "another"
-
-]], "plugin.another"))
-
-package.preload["plugin.some"] = assert(load([[
-return "some"
-
-]], "plugin.some"))
-
-local another = require("plugin.another")
-local some = require("plugin.some")
-
-return some .. " " .. another
-]=]
-
 describe("bundle", function()
 	local logMock = mock(log, --[[doStubs:]] true)
 	lazy_setup(function()
@@ -89,6 +72,24 @@ describe("bundle", function()
 		end)
 
 		assert.are_equal("file", mode(destination))
-		assert.are_equal(expectedMany, text(destination))
+
+		assert.are_equal(text("expected.lua"), text(destination))
+	end)
+
+	it("works with several plugin files that are nested", function()
+		finally = upgradeFinally(finally)
+		fs.change_dir("nested")
+		finally(function()
+			fs.pop_dir()
+		end)
+
+		local destination = path("destination", "compiled.lua")
+		bundle("plugin", destination)
+		finally(function()
+			os.remove(destination)
+		end)
+
+		assert.are_equal("file", mode(destination))
+		assert.are_equal(text("expected.lua"), text(destination))
 	end)
 end)

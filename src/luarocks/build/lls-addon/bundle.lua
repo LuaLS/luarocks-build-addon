@@ -37,6 +37,7 @@ end
 ---@param dirName string
 local function addDirectory(strings, modulePath, dirName)
 	fs.change_dir(dirName)
+	table.insert(modulePath, dirName)
 	for entry in fs.dir(".") do
 		if entry == "." or entry == ".." then
 			goto continue
@@ -46,20 +47,20 @@ local function addDirectory(strings, modulePath, dirName)
 			local filename = string.match(entry, "^([^%.]+)%.lua$")
 			if filename then
 				table.insert(modulePath, filename)
-				table.insert(strings, formatPreloadFile(dir.path(fs.current_dir(), entry), table.concat(modulePath)))
+				table.insert(
+					strings,
+					formatPreloadFile(dir.path(fs.current_dir(), entry), table.concat(modulePath, "."))
+				)
 				table.remove(modulePath)
 			end
 		elseif fs.is_dir(entry) then
-			table.insert(modulePath, dirName)
-			table.insert(modulePath, ".")
 			addDirectory(strings, modulePath, entry)
-			table.remove(modulePath)
-			table.remove(modulePath)
 		else
 			error("unknown file type")
 		end
 		::continue::
 	end
+	table.remove(modulePath)
 	fs.pop_dir()
 end
 
@@ -73,7 +74,7 @@ local function bundle(filename, destination)
 	local strings = {} ---@type string[]
 	if fs.is_dir(dir.path(fs.current_dir(), filename)) then
 		log.info("found bundled files directory at " .. filename .. "/, adding to bundle...")
-		addDirectory(strings, { filename, "." }, filename)
+		addDirectory(strings, {}, filename)
 	end
 
 	log.info("adding main file " .. filename .. ".lua to bundle...")
