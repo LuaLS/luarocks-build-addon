@@ -3,15 +3,18 @@
 	"runtime.path": [
 		"src/?.lua",
 		"src/?/init.lua",
+		"?.lua",
+		"?/init.lua",
 		"lua_modules/share/lua/5.4/?.lua",
 		"lua_modules/share/lua/5.4/?/init.lua"
 	],
 	"runtime.version": "Lua 5.4",
 	"workspace.checkThirdParty": false,
 	"workspace.library": [
-		"$USERPROFILE/Documents/References/luarocks/src",
 		"${addons}/luafilesystem/module/library",
 		"${addons}/busted/module/library",
-		"${addons}/luassert/module/library"
+		"${addons}/luassert/module/library",
+		"$USERPROFILE/Documents/References/luarocks/src"
+		// "lua_modules/share/lua/5.4"
 	]
 }
