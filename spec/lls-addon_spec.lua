@@ -1,11 +1,12 @@
 local cfg = require("luarocks.core.cfg")
 local fs = require("luarocks.fs")
 local pathMod = require("luarocks.path")
-local rockspecs = require("luarocks.rockspecs")
 
 local json = require("luarocks.build.lls-addon.json-util")
 local llsAddon = require("luarocks.build.lls-addon")
 local log = require("luarocks.build.lls-addon.log")
+
+local makeRockspec = require("spec.util.make-rockspec")
 
 local SEP = package.config:sub(1, 1)
 local PATH_SEP = package.config:sub(3, 3)
@@ -14,30 +15,6 @@ local PATH_SEP = package.config:sub(3, 3)
 ---@return string
 local function path(...)
 	return table.concat({ ... }, SEP)
-end
-
----@param rockspecEntries? { [string]: any }
----@return luarocks.rockspec
-local function makeRockspec(rockspecEntries)
-	local values = {
-		rockspec_format = "3.1",
-		package = "test",
-		version = "0.1-1",
-		source = { url = "" },
-		build = { type = "lls-addon" },
-	}
-
-	if rockspecEntries then
-		for k, v in pairs(rockspecEntries) do
-			values[k] = v
-		end
-	end
-
-	local rockspec, msg =
-		rockspecs.from_persisted_table("types-0.1-1.rockspec", values, --[[globals:]] {}, --[[quick:]] true)
-	---@diagnostic disable-next-line: redundant-parameter
-	assert.is_truthy(rockspec, msg)
-	return rockspec --[[@as luarocks.rockspec]]
 end
 
 ---@param t any
@@ -93,47 +70,61 @@ local function pathEquals(...)
 end
 
 describe("lls-addon", function()
+	local PACKAGE = makeRockspec.defaultPackage
+	local VERSION = makeRockspec.defaultVersion
+
+	local CURRENT_DIR = path("fake", "path", "to", "types")
+	local ROCKS_DIR = path("fake", "path", "to", "rocks")
+
+	local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", PACKAGE, VERSION)
+	local LUA_DIR = path("lua_modules", "share", "lua", "5.4")
+
 	lazy_setup(function()
 		cfg.init()
 		fs.init()
+		pathMod.use_tree(path(ROCKS_DIR, "lua_modules"))
 	end)
 
 	describe("compileLuarc", function()
-		before_each(function()
-			mock(log, --[[stub:]] true)
-		end)
+		do
+			local logMock
+			before_each(function()
+				logMock = mock(log, --[[stub:]] true)
+			end)
+			after_each(function()
+				mock.revert(logMock)
+			end)
+		end
 
 		local compileLuarc = llsAddon.compileLuarc
-		local installDir = path("fake", "path", "to", "rock")
-		local currentDir = path("fake", "path", "to", "types")
-
 		it("creates no luarc when nothing is added", function()
-			local fs = stubFs({ current_dir = currentDir })
+			local fs = stubFs({ current_dir = CURRENT_DIR })
 
-			local luarc, installEntries = compileLuarc(installDir, nil)
+			local rockspec = makeRockspec()
+
+			local luarc, installEntries = compileLuarc(rockspec, {})
 			assert.is_nil(luarc)
 			assert.are_equal(0, #installEntries)
 			assert.stub(fs.copy).was.called(0)
 			assert.stub(fs.copy_contents).was.called(0)
-			assert.stub(fs.exists).was.called_with(path(currentDir, "library"))
-			assert.stub(fs.exists).was.called_with(path(currentDir, "plugin.lua"))
-			assert.stub(fs.exists).was.called_with(path(currentDir, "config.json"))
+			assert.stub(fs.exists).was.called_with(path(CURRENT_DIR, "library"))
+			assert.stub(fs.exists).was.called_with(path(CURRENT_DIR, "plugin.lua"))
+			assert.stub(fs.exists).was.called_with(path(CURRENT_DIR, "config.json"))
 		end)
 
 		it("works when given a library", function()
 			stubFs({
 				-- key = handler / return value
-				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, "library")),
+				current_dir = CURRENT_DIR,
+				exists = pathEquals(path(CURRENT_DIR, "library")),
 			})
-
-			local luarc, installEntries = compileLuarc(installDir, nil)
-			assert.are_same({ ["workspace.library"] = { path(installDir, "library") } }, luarc)
+			local luarc, installEntries = compileLuarc(makeRockspec(), {})
+			assert.are_same({ ["workspace.library"] = { path(ROCKS_DIR, INSTALL_DIR, "library") } }, luarc)
 			assert.are_same({
 				{
 					type = "directory",
-					source = path(currentDir, "library"),
-					destination = path(installDir, "library"),
+					source = path(CURRENT_DIR, "library"),
+					destination = path(ROCKS_DIR, INSTALL_DIR, "library"),
 				},
 			}, installEntries)
 		end)
@@ -141,47 +132,54 @@ describe("lls-addon", function()
 		it("works when given a plugin", function()
 			stubFs({
 				-- key = handler / return value
-				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, "plugin.lua")),
+				current_dir = CURRENT_DIR,
+				exists = pathEquals(path(CURRENT_DIR, "plugin.lua")),
 			})
 
-			local luarc, installEntries = compileLuarc(installDir, nil)
-			assert.are_same({ ["runtime.plugin"] = path(installDir, "plugin.lua") }, luarc)
+			local rockspec = makeRockspec({ package = "lls-addon-types" })
+			local luarc, installEntries = compileLuarc(rockspec, {})
+			assert.are_same({ ["runtime.plugin"] = path(ROCKS_DIR, LUA_DIR, "lls-addon-types.lua") }, luarc)
 			assert.are_same({
 				{
-					type = "file",
-					source = path(currentDir, "plugin.lua"),
-					destination = path(installDir, "plugin.lua"),
+					type = "bundle",
+					source = "plugin",
+					destination = path(ROCKS_DIR, LUA_DIR, "lls-addon-types.lua"),
 				},
 			}, installEntries)
 		end)
 
 		it("works when given rockspec settings", function()
-			stubFs({ current_dir = currentDir })
+			stubFs({ current_dir = CURRENT_DIR })
 
-			local luarc, installEntries = compileLuarc(installDir, --[[rockspecSettings:]] {
-				["some.example"] = 42,
-				another = {
-					example = 100,
+			local rockspec = makeRockspec({
+				build = {
+					settings = {
+						["some.example"] = 42,
+						another = {
+							example = 100,
+						},
+					},
 				},
 			})
+			local luarc, installEntries = compileLuarc(rockspec, {})
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
 			assert.are_equal(0, #installEntries)
 		end)
 
 		it("errors when rockspec settings is not an object", function()
-			stubFs({ currentDir = currentDir })
+			stubFs({ currentDir = CURRENT_DIR })
 
+			local rockspec = makeRockspec({ build = { settings = { "some", "example" } } })
 			assert.error(function()
-				compileLuarc(installDir, { "some", "example" })
+				compileLuarc(rockspec, {})
 			end)
 		end)
 
 		it("works when given a config.json", function()
 			stubFs({
 				-- key = handler / return value
-				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, "config.json")),
+				current_dir = CURRENT_DIR,
+				exists = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function()
 				return json.object({
@@ -192,66 +190,75 @@ describe("lls-addon", function()
 				})
 			end)
 
-			local luarc, installEntries = compileLuarc(installDir, nil)
+			local rockspec = makeRockspec()
+			local luarc, installEntries = compileLuarc(rockspec, {})
 			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
 			assert.are_same({
 				{
 					type = "file",
-					source = path(currentDir, "config.json"),
-					destination = path(installDir, "config.json"),
+					source = path(CURRENT_DIR, "config.json"),
+					destination = path(ROCKS_DIR, INSTALL_DIR, "config.json"),
 				},
 			}, installEntries)
 			assert.stub(jsonRead).was.called(1)
-			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
+			assert.stub(jsonRead).was.called_with(path(CURRENT_DIR, "config.json"))
 		end)
 
 		it("errors when config.json is not an object", function()
 			stubFs({
 				-- key = handler / return value
-				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, "config.json")),
+				current_dir = CURRENT_DIR,
+				exists = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function()
 				return false
 			end)
 
+			local rockspec = makeRockspec()
+
 			assert.error(function()
-				compileLuarc(installDir, nil)
+				compileLuarc(rockspec, {})
 			end)
 
 			assert.stub(jsonRead).was.called(1)
-			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
+			assert.stub(jsonRead).was.called_with(path(CURRENT_DIR, "config.json"))
 		end)
 
 		it("errors when config.json's settings key is not an object", function()
 			stubFs({
 				-- key = handler / return value
-				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, "config.json")),
+				current_dir = CURRENT_DIR,
+				exists = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function()
 				return json.object({ settings = false })
 			end)
 
+			local rockspec = makeRockspec()
 			assert.error(function()
-				compileLuarc(installDir, nil)
+				compileLuarc(rockspec, {})
 			end)
 
 			assert.stub(jsonRead).was.called(1)
-			assert.stub(jsonRead).was.called_with(path(currentDir, "config.json"))
+			assert.stub(jsonRead).was.called_with(path(CURRENT_DIR, "config.json"))
 		end)
 
 		it("only copies from rockspec settings when also given config.json", function()
 			stubFs({
 				-- key = handler / return value
-				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, "config.json")),
+				current_dir = CURRENT_DIR,
+				exists = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function(pathArg)
 				return nil, "this should not be called"
 			end)
 
-			local luarc, installEntries = compileLuarc(installDir, { ["different.example"] = 96 })
+			local rockspec = makeRockspec({
+				build = {
+					settings = { ["different.example"] = 96 },
+				},
+			})
+			local luarc, installEntries = compileLuarc(rockspec, {})
 
 			assert.are_same({ ["different.example"] = 96 }, luarc)
 			assert.are_equal(0, #installEntries)
@@ -261,17 +268,23 @@ describe("lls-addon", function()
 		it("lets rockspec settings overwrite library and plugin keys", function()
 			stubFs({
 				-- key = handler / return value
-				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, "library"), path(currentDir, "plugin.lua")),
+				current_dir = CURRENT_DIR,
+				exists = pathEquals(path(CURRENT_DIR, "library"), path(CURRENT_DIR, "plugin.lua")),
 			})
 
-			local luarc, installEntries = compileLuarc(installDir, {
-				["workspace.library"] = { "anotherLibrary" },
-				["runtime.plugin"] = "anotherPlugin.lua",
+			local rockspec = makeRockspec({
+				build = {
+					settings = {
+						["workspace.library"] = { "anotherLibrary" },
+						["runtime.plugin"] = "anotherPlugin.lua",
+					},
+				},
 			})
+
+			local luarc, installEntries = compileLuarc(rockspec, {})
 			assert.are_same({
 				["workspace.library"] = {
-					path(installDir, "library"),
+					path(ROCKS_DIR, INSTALL_DIR, "library"),
 					"anotherLibrary",
 				},
 				["runtime.plugin"] = "anotherPlugin.lua",
@@ -279,23 +292,18 @@ describe("lls-addon", function()
 			assert.are_equal(2, #installEntries)
 			assert.contains({
 				type = "directory",
-				source = path(currentDir, "library"),
-				destination = path(installDir, "library"),
+				source = path(CURRENT_DIR, "library"),
+				destination = path(ROCKS_DIR, INSTALL_DIR, "library"),
 			}, installEntries)
 			assert.contains({
-				type = "file",
-				source = path(currentDir, "plugin.lua"),
-				destination = path(installDir, "plugin.lua"),
+				type = "bundle",
+				source = "plugin",
+				destination = path(ROCKS_DIR, LUA_DIR, PACKAGE .. ".lua"),
 			}, installEntries)
 		end)
 	end)
 
 	describe("findLuarcFiles", function()
-		lazy_setup(function()
-			cfg.init()
-			fs.init()
-		end)
-
 		before_each(function()
 			mock(log, --[[stub:]] true)
 		end)

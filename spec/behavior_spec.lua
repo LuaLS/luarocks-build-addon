@@ -1,6 +1,7 @@
 local lfs = require("lfs") ---@type LuaFileSystem
 
 local luarocks = {
+	---@type luarocks.core.cfg
 	cfg = require("luarocks.core.cfg"),
 	fs = require("luarocks.fs"),
 	path = require("luarocks.path"),
@@ -13,6 +14,8 @@ local luarocks = {
 
 local json = require("luarocks.build.lls-addon.json-util")
 local log = require("luarocks.build.lls-addon.log")
+
+local upgradeFinally = require("spec.util.upgrade-finally")
 
 assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
 
@@ -43,6 +46,7 @@ local function path(...)
 end
 
 local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", "types", "0.1-1")
+local LUA_DIR = path("lua_modules", "share", "lua", "5.4")
 
 ---@param path string
 ---@return string? mode
@@ -51,7 +55,7 @@ local function mode(path)
 end
 
 local function assertNoRoot(filePath)
-	assert(filePath:sub(1, 1) ~= "/" and filePath:sub(1, 2) ~= "C:", "don't pass paths starting at root")
+	assert(filePath:sub(1, 1) ~= "/" and not filePath:match("^%a%:"), "don't pass paths starting at root")
 end
 
 local rmDir
@@ -142,7 +146,7 @@ end
 
 ---@param dirPath string
 local function pushDir(dirPath)
-	local cd = assert(lfs.currentdir())
+	local cd = lfs.currentdir()
 	assert(lfs.chdir(dirPath))
 	finally(function()
 		assert(lfs.chdir(cd))
@@ -152,12 +156,12 @@ end
 ---@param options? lls-addon.spec.makeProject.options
 local function makeProject(options)
 	options = options or {}
-	local cd = luarocks.fs.current_dir()
+	local cd = lfs.currentdir()
 	tryCopyLuarc(options.projectDir)
 	tryCopySettings(options.projectDir)
-	local lock = assert(luarocks.fs.lock_access(cd))
+	local lock = assert(lfs.lock_dir(cd))
 	finally(function()
-		luarocks.fs.unlock_access(lock)
+		lock:free()
 	end)
 	stub(luarocks.util, "printout")
 	stub(luarocks.util, "warning")
@@ -170,15 +174,18 @@ local function makeProject(options)
 		newProjectDir = path(cd, options.projectDir)
 		luarocks.cfg.project_dir = newProjectDir
 
-		pushDir(options.projectDir)
+		lfs.chdir(options.projectDir)
 		assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
+		luarocks.path.use_tree(path(newProjectDir, "lua_modules"))
 		finally(function()
+			local cd = lfs.currentdir()
+			lfs.chdir(newProjectDir)
 			rmDir(".luarocks")
 			rmDir("lua_modules")
 			tryRmFile(".luarc.json")
+			lfs.chdir(cd)
 		end)
-		pushDir(cd)
-		luarocks.path.use_tree(path(newProjectDir, "lua_modules"))
+		lfs.chdir(cd)
 	else
 		assert(luarocks.cmd.init.command({ no_wrapper_scripts = true, no_gitignore = true }))
 		luarocks.path.use_tree(path(cd, "lua_modules"))
@@ -188,30 +195,9 @@ local function makeProject(options)
 			tryRmFile(".luarc.json")
 		end)
 	end
-	luarocks.cfg.no_install = options.noInstall
 	assert(luarocks.cmd.make.command({ no_install = options.noInstall, rockspec = options.rockspec }))
 	luarocks.cfg.project_dir = oldProjectDir
 	mock.revert(logMock)
-end
-
-local function upgradeFinally()
-	local cleanupAll = {} ---@type (fun())[]
-	---@param fun fun()
-	local function newFinally(fun)
-		table.insert(cleanupAll, fun)
-	end
-	finally(function()
-		local result = true
-		local message = nil
-		for i = #cleanupAll, 1, -1 do
-			local s, msg = pcall(cleanupAll[i])
-			result = result and s
-			message = message or msg
-		end
-
-		assert(result, message)
-	end)
-	finally = newFinally
 end
 
 ---@param dir string
@@ -219,7 +205,7 @@ end
 local function withProject(dir, handler)
 	assertNoRoot(dir)
 	return function()
-		upgradeFinally()
+		finally = upgradeFinally(finally)
 		pushDir(dir)
 		makeProject()
 		handler()
@@ -232,7 +218,7 @@ describe("luarocks-build-lls-addon", function()
 		lazy_setup(function()
 			luarocks.cfg.init()
 			luarocks.fs.init()
-			cd = assert(lfs.currentdir())
+			cd = lfs.currentdir()
 			assert(lfs.chdir(path("spec", "projects")))
 		end)
 
@@ -272,10 +258,10 @@ describe("luarocks-build-lls-addon", function()
 	it(
 		"works when there is a plugin included",
 		withProject("with-plugin", function()
-			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
-				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+				runtime = { plugin = path(LUA_DIR, "types.lua") },
 			}, luarc)
 		end)
 	)
@@ -297,11 +283,11 @@ describe("luarocks-build-lls-addon", function()
 		"works when there is a library and plugin included",
 		withProject("with-lib-plugin", function()
 			assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
-			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
-				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+				runtime = { plugin = path(LUA_DIR, "types.lua") },
 			}, luarc)
 		end)
 	)
@@ -310,11 +296,11 @@ describe("luarocks-build-lls-addon", function()
 		"works when there is a config and plugin included",
 		withProject("with-config-plugin", function()
 			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
-			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				example = true,
-				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+				runtime = { plugin = path(LUA_DIR, "types.lua") },
 			}, luarc)
 		end)
 	)
@@ -324,12 +310,12 @@ describe("luarocks-build-lls-addon", function()
 		withProject("with-lib-config-plugin", function()
 			assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
 			assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
-			assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
+			assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
 			local luarc = json.read(".luarc.json")
 			assert.are_same({
 				workspace = { library = { path(INSTALL_DIR, "library") } },
 				example = true,
-				runtime = { plugin = path(INSTALL_DIR, "plugin.lua") },
+				runtime = { plugin = path(LUA_DIR, "types.lua") },
 			}, luarc)
 		end)
 	)
@@ -404,7 +390,7 @@ describe("luarocks-build-lls-addon", function()
 	)
 
 	it("can install files from a different project directory", function()
-		upgradeFinally()
+		finally = upgradeFinally(finally)
 		pushDir("install-from-different-dir")
 		lfs.chdir("different-dir")
 		makeProject({ projectDir = path("..", "project-dir") })
@@ -412,18 +398,18 @@ describe("luarocks-build-lls-addon", function()
 		local cd = lfs.currentdir()
 		assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
 		assert.is_nil(mode(path(INSTALL_DIR, "config.json")))
-		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
+		assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			hover = { enable = true },
 			workspace = { library = { path(cd, INSTALL_DIR, "library") } },
-			runtime = { plugin = path(cd, INSTALL_DIR, "plugin.lua") },
+			runtime = { plugin = path(cd, LUA_DIR, "types.lua") },
 		}, luarc)
 		lfs.chdir(path("..", "different-dir"))
 	end)
 
 	it("errors when given a bad luarc", function()
-		upgradeFinally()
+		finally = upgradeFinally(finally)
 		pushDir("with-rockspec-settings-bad-luarc")
 
 		assert.error(function()
@@ -435,17 +421,17 @@ describe("luarocks-build-lls-addon", function()
 	end)
 
 	it("doesn't install when given --no-install", function()
-		upgradeFinally()
+		finally = upgradeFinally(finally)
 		pushDir("no-install")
 		makeProject({ noInstall = true })
 		assert.is_nil(mode(path(INSTALL_DIR, "library")))
 		assert.is_nil(mode(".luarc.json"))
 		assert.is_nil(mode(path(INSTALL_DIR, "config.json")))
-		assert.is_nil(mode(path(INSTALL_DIR, "plugin.lua")))
+		assert.is_nil(mode(path(LUA_DIR, "types.lua")))
 	end)
 
 	it("installs to unique paths", function()
-		upgradeFinally()
+		finally = upgradeFinally(finally)
 		pushDir("no-install")
 		luarocks.cfg.variables.LLSADDON_LUARCPATH = "some/path/luarc-settings.json;another/path/luarc-settings.json"
 		luarocks.cfg.variables.LLSADDON_VSCSETTINGSPATH =

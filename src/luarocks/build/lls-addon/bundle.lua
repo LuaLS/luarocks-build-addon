@@ -21,9 +21,9 @@ end
 local function formatPreloadFile(path, moduleName)
 	log.info("adding " .. moduleName .. " to bundle...")
 	local f = assertContext("when opening bundled file", io.open(path, "r"))
-	local text = assert("when reading from bundled file", f:read("a"))
+	local text = assertContext("when reading from bundled file", f:read("a"))
 
-	local maxChainEqs = 0
+	local maxChainEqs = -1
 	for chain in string.gmatch(text, "%](%=+)%]") do
 		maxChainEqs = math.max(maxChainEqs, string.len(chain))
 	end
@@ -71,18 +71,21 @@ end
 ---@param destination string
 local function bundle(filename, destination)
 	local strings = {} ---@type string[]
-	if fs.is_dir(filename) then
+	if fs.is_dir(dir.path(fs.current_dir(), filename)) then
 		log.info("found bundled files directory at " .. filename .. "/, adding to bundle...")
 		addDirectory(strings, { filename, "." }, filename)
 	end
 
 	log.info("adding main file " .. filename .. ".lua to bundle...")
-	local mainFile = assertContext("when opening main file", io.open(filename .. ".lua", "r")) --[[@as file*]]
+	local mainFile =
+		assertContext("when opening main file", io.open(dir.path(fs.current_dir(), filename .. ".lua"), "r")) --[[@as file*]]
 	local text = assertContext("when reading from main file", mainFile:read("a"))
 	table.insert(strings, text)
 	assertContext("when closing main file", mainFile:close())
 
 	log.info("sending bundled file to '" .. destination .. "'...")
+	local destinationDir = dir.dir_name(destination)
+	fs.make_dir(destinationDir)
 	local destinationFile = assertContext("when opening destination file", io.open(destination, "w")) --[[@as file*]]
 	assertContext("when writing to destination file", destinationFile:write(table.concat(strings, "\n\n")))
 	assertContext("when closing destination file", destinationFile:close())

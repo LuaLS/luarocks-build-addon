@@ -1,4 +1,4 @@
-local cfg = require("luarocks.core.cfg")
+local cfg = require("luarocks.core.cfg") --[[@as luarocks.core.cfg]]
 local dir = require("luarocks.dir")
 local fs = require("luarocks.fs")
 local path = require("luarocks.path")
@@ -48,13 +48,18 @@ local function parsePathList(pathsString)
 	return paths
 end
 
-local function assertContext(context, ...)
+---@generic S, M
+---@param context string
+---@param s S
+---@param msg? M
+---@param ... any
+---@return S s, M msg, any ...
+local function assertContext(context, s, msg, ...)
 	-- luacov: disable
-	local s, msg = ...
 	if not s then
 		error(context .. ": " .. msg)
 	end
-	return ...
+	return s, msg, ...
 	-- luacov: enable
 end
 
@@ -79,7 +84,7 @@ end
 local function getProjectDir()
 	local projectDir = cfg.project_dir --[[@as string]]
 	if not projectDir then
-		log.info("project directory not found, defaulting to working directory")
+		log.info("Project directory not found, defaulting to working directory")
 		projectDir = fs.current_dir()
 	end
 	return projectDir
@@ -103,18 +108,18 @@ local function makeDirRelativeTo(self, target)
 end
 
 ---@param projectDir string
----@param rockspec luarocks.rockspec
+---@param rockspec luarocks.Rockspec
 ---@param env { [string]: string? }
 ---@return string installDir, string formattedInstallDir
 local function getInstallDir(projectDir, rockspec, env)
 	local installDir = path.install_dir(rockspec.package, rockspec.version)
 
 	if parseFlag(env.ABSPATH) then
-		log.info("LLSADDON_ABSPATH recognized, keeping path absolute")
+		log.info("LLSADDON_ABSPATH is truthy, keeping install path absolute")
 		return installDir, installDir
 	end
 
-	log.info("Attempt to make install directory relative to " .. projectDir)
+	log.info("Attempt to make " .. installDir .. " relative to " .. projectDir)
 	return installDir, makeDirRelativeTo(installDir, projectDir)
 end
 M.getInstallDir = getInstallDir
@@ -213,7 +218,7 @@ end
 
 ---creates a "diffed" .luarc.json configuration that represents all the changes
 ---to apply to the user's configuration files
----@param rockspec luarocks.rockspec
+---@param rockspec luarocks.Rockspec
 ---@param env { [string]: string? }
 ---@return { [string]: any }? luarc
 ---@return lls-addon.install-entry[] installEntries
@@ -242,10 +247,16 @@ local function compileLuarc(rockspec, env)
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
 	if fs.exists(pluginSource) then
-		local pluginDir = path.lua_dir(rockspec.package, rockspec.version)
-		local pluginDestinationName = package .. ".lua"
+		local pluginDir = path.deploy_lua_dir(assertContext("tree not set", cfg.root_dir))
+		local pluginDestinationName = rockspec.package .. ".lua"
 		local pluginDestination = dir.path(pluginDir, pluginDestinationName)
 		local formattedPluginDestination = dir.path(pluginDir, pluginDestinationName)
+		if parseFlag(env["ABSPATH"]) then
+			log.info("LLSADDON_ABSPATH is truthy, keeping plugin path absolute.")
+		else
+			log.info("Attempt to make plugin path relative to " .. projectDir)
+			formattedPluginDestination = makeDirRelativeTo(formattedPluginDestination, projectDir)
+		end
 
 		-- also set 'runtime.plugin' in .luarc.json
 		luarc = luarc or json.object({})
@@ -373,17 +384,14 @@ M.installLuarcFiles = installLuarcFiles
 ---  directory
 ---- modifies or creates a project-scoped `.luarc.json`, which will contain
 ---  references to the above copied files
----@param rockspec luarocks.rockspec
+---@param rockspec luarocks.Rockspec
 ---@param env { [string]: string? }
 ---@param noInstall boolean
 local function installAddon(rockspec, env, noInstall)
 	log.info("Building addon " .. rockspec.package .. " @ " .. rockspec.version)
 
 	local projectDir = getProjectDir()
-	local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
-	local pluginSrcDir = path.lua_dir(rockspec.package, rockspec.version)
-	local luarc, installEntries =
-		compileLuarc(installDir, rockspec.build["settings"], formattedInstallDir, pluginSrcDir, rockspec.package)
+	local luarc, installEntries = compileLuarc(rockspec, env)
 
 	if not luarc then
 		log.warn("addon has no features; no files written!")
@@ -408,7 +416,7 @@ An error occurred while running the lls-addon backend.
 Please submit an issue at https://github.com/LuaLS/luarocks-build-addon/issues
 ]]
 
----@param rockspec luarocks.rockspec
+---@param rockspec luarocks.Rockspec
 ---@param noInstall boolean
 ---@return boolean, string?
 function M.run(rockspec, noInstall)
@@ -420,7 +428,7 @@ function M.run(rockspec, noInstall)
 		VSCSETTINGSPATH = cfg.variables["LLSADDON_VSCSETTINGSPATH"],
 	}
 
-	local s, msg = pcall(installAddon, rockspec, env, noInstall)
+	local s, msg = xpcall(installAddon, debug.traceback, rockspec, env, noInstall)
 	if not s then
 		---@cast msg string
 		local match = msg:match("%[BuildError%]%: (.*)$")

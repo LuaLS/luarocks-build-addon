@@ -1,0 +1,28 @@
+{
+	"runtime": {
+		"extensions": [],
+		"frameworkVersions": [],
+		"nonstandardSymbol": [],
+		"requireLikeFunction": [],
+		"requirePattern": [],
+		"special": {},
+		"version": "Lua5.4"
+	},
+	"workspace": {
+		"enableReindex": false,
+		"encoding": "utf-8",
+		"ignoreDir": [],
+		"ignoreGlobs": [],
+		"library": [
+			"$USERPROFILE/Documents/References/luarocks/src",
+			"$USERPROFILE/AppData/Roaming/Code/User/globalStorage/sumneko.lua/addonManager/addons/luafilesystem/module/library",
+			"$USERPROFILE/AppData/Roaming/Code/User/globalStorage/sumneko.lua/addonManager/addons/busted/module/library",
+			"$USERPROFILE/AppData/Roaming/Code/User/globalStorage/sumneko.lua/addonManager/addons/luassert/module/library"
+		],
+		"moduleMap": [],
+		"packageDirs": [],
+		"preloadFileSize": 0,
+		"reindexDuration": 5000,
+		"workspaceRoots": []
+	}
+}
