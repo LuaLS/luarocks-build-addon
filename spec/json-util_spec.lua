@@ -42,7 +42,7 @@ describe("json-util", function()
 			local writeSpy = spy(function(self)
 				return self
 			end)
-			local closeSpy = spy()
+			local closeSpy = spy(function() end)
 			return setmetatable({
 				write = writeSpy,
 				close = closeSpy,
@@ -69,9 +69,16 @@ describe("json-util", function()
 
 		it("can sort keys with the sortKeys option", function()
 			local fileStub = getFileStub()
+			local writeSpy = fileStub.write --[[@as luassert.spy]]
+			local closeSpy = fileStub.close --[[@as luassert.spy]]
 			local openStub = stub(json, "openFile", fileStub)
 			json.write(path("fake", "path"), json.object({ a = true, b = true, c = true }), { sortKeys = true })
 			assert.stub(openStub).was.called(1)
+			assert.stub(openStub).was.called_with(path("fake", "path"), "w")
+			assert.spy(writeSpy).was.called(1)
+			assert.spy(writeSpy).was.called_with(fileStub, '{\n  "a":true,\n  "b":true,\n  "c":true\n}')
+			assert.spy(closeSpy).was.called(1)
+			assert.spy(closeSpy).was.called_with(fileStub)
 		end)
 	end)
 end)

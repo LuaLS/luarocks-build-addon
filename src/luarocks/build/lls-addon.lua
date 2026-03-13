@@ -3,6 +3,7 @@ local dir = require("luarocks.dir")
 local fs = require("luarocks.fs")
 local path = require("luarocks.path")
 
+local bundle = require("luarocks.build.lls-addon.bundle")
 local json = require("luarocks.build.lls-addon.json-util")
 local log = require("luarocks.build.lls-addon.log")
 local tableUtil = require("luarocks.build.lls-addon.table-util")
@@ -79,13 +80,27 @@ local function getProjectDir()
 	local projectDir = cfg.project_dir --[[@as string]]
 	if not projectDir then
 		log.info("project directory not found, defaulting to working directory")
-		assertContext("when changing to working directory", fs.change_dir("."))
 		projectDir = fs.current_dir()
-		assert(fs.pop_dir(), "directory stack underflow")
 	end
 	return projectDir
 end
 M.getProjectDir = getProjectDir
+
+---@param self string
+---@param target string
+---@return string
+local function makeDirRelativeTo(self, target)
+	if string.sub(self, 1, string.len(target)) ~= target then
+		return self
+	end
+
+	local result = string.sub(self, string.len(target) + 1)
+	if string.sub(result, 1, 1) == DIR_SEP then
+		return string.sub(result, 2)
+	end
+
+	return result
+end
 
 ---@param projectDir string
 ---@param rockspec luarocks.rockspec
@@ -93,19 +108,14 @@ M.getProjectDir = getProjectDir
 ---@return string installDir, string formattedInstallDir
 local function getInstallDir(projectDir, rockspec, env)
 	local installDir = path.install_dir(rockspec.package, rockspec.version)
-	local formattedInstallDir = installDir
 
-	if parseFlag(env.ABSPATH) or installDir:sub(1, #projectDir) ~= projectDir then
-		return installDir, formattedInstallDir
+	if parseFlag(env.ABSPATH) then
+		log.info("LLSADDON_ABSPATH recognized, keeping path absolute")
+		return installDir, installDir
 	end
 
-	log.info("Making install directory relative to " .. projectDir)
-	formattedInstallDir = formattedInstallDir:sub(#projectDir + 1)
-	if formattedInstallDir:sub(1, 1) == DIR_SEP then
-		formattedInstallDir = formattedInstallDir:sub(2)
-	end
-
-	return installDir, formattedInstallDir
+	log.info("Attempt to make install directory relative to " .. projectDir)
+	return installDir, makeDirRelativeTo(installDir, projectDir)
 end
 M.getInstallDir = getInstallDir
 
@@ -175,7 +185,7 @@ local function copyDirectory(source, destination)
 end
 
 ---@class lls-addon.install-entry
----@field type "file" | "directory"
+---@field type "file" | "directory" | "bundle"
 ---@field source string
 ---@field destination string
 
@@ -190,6 +200,9 @@ local function installFiles(installEntries)
 			copyFile(source, destination)
 		elseif type == "directory" then
 			copyDirectory(source, destination)
+		elseif type == "bundle" then
+			-- assuming 'source' is just a filename
+			bundle(source, destination)
 		else
 			-- luacov: disable
 			error("Unreachable: unknown install entry type: " .. type)
@@ -200,13 +213,13 @@ end
 
 ---creates a "diffed" .luarc.json configuration that represents all the changes
 ---to apply to the user's configuration files
----@param installDir string
----@param rockspecSettings unknown
----@param formattedInstallDir? string
+---@param rockspec luarocks.rockspec
+---@param env { [string]: string? }
 ---@return { [string]: any }? luarc
 ---@return lls-addon.install-entry[] installEntries
-local function compileLuarc(installDir, rockspecSettings, formattedInstallDir)
-	formattedInstallDir = formattedInstallDir or installDir
+local function compileLuarc(rockspec, env)
+	local projectDir = getProjectDir()
+	local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
 
 	local luarc ---@type { [string]: any }
 	local installEntries = {} ---@type lls-addon.install-entry[]
@@ -229,8 +242,10 @@ local function compileLuarc(installDir, rockspecSettings, formattedInstallDir)
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
 	if fs.exists(pluginSource) then
-		local pluginDestination = dir.path(installDir, "plugin.lua")
-		local formattedPluginDestination = dir.path(formattedInstallDir, "plugin.lua")
+		local pluginDir = path.lua_dir(rockspec.package, rockspec.version)
+		local pluginDestinationName = package .. ".lua"
+		local pluginDestination = dir.path(pluginDir, pluginDestinationName)
+		local formattedPluginDestination = dir.path(pluginDir, pluginDestinationName)
 
 		-- also set 'runtime.plugin' in .luarc.json
 		luarc = luarc or json.object({})
@@ -238,18 +253,20 @@ local function compileLuarc(installDir, rockspecSettings, formattedInstallDir)
 		luarc["runtime.plugin"] = formattedPluginDestination
 
 		table.insert(installEntries, {
-			type = "file",
-			source = pluginSource,
+			type = "bundle",
+			source = "plugin",
 			destination = pluginDestination,
 		} --[[@as lls-addon.install-entry]])
 	end
 
+	local rockspecSettings = rockspec.build["settings"]
 	local configSource = dir.path(fs.current_dir(), "config.json")
 	if rockspecSettings ~= nil then
+		-- merge rockspec.build.settings into .luarc.json
 		luarc = luarc or json.object({})
 		luarc = copyBuildSettings(rockspecSettings, luarc)
 	elseif fs.exists(configSource) then
-		-- also merge 'settings' from 'config.json' into .luarc.json
+		-- merge 'settings' from 'config.json' into .luarc.json
 		luarc = luarc or json.object({})
 		luarc = copyConfigSettings(configSource, luarc)
 
@@ -364,7 +381,9 @@ local function installAddon(rockspec, env, noInstall)
 
 	local projectDir = getProjectDir()
 	local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
-	local luarc, installEntries = compileLuarc(installDir, rockspec.build["settings"], formattedInstallDir)
+	local pluginSrcDir = path.lua_dir(rockspec.package, rockspec.version)
+	local luarc, installEntries =
+		compileLuarc(installDir, rockspec.build["settings"], formattedInstallDir, pluginSrcDir, rockspec.package)
 
 	if not luarc then
 		log.warn("addon has no features; no files written!")
