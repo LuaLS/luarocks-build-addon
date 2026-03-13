@@ -1,9 +1,9 @@
----@class luarocks.rockspec.build
+---@class luarocks.Rockspec.build
 ---@field [string] any
 
----@class luarocks.rockspec.query
+---@class luarocks.Rockspec.query
 
----@class luarocks.rockspec.description
+---@class luarocks.Rockspec.description
 ---@field summary string
 ---@field detailed string
 ---@field homepage string
@@ -12,7 +12,7 @@
 ---@field license string
 ---@field labels string[]
 
----@class luarocks.rockspec.source
+---@class luarocks.Rockspec.source
 ---@field url string
 ---@field module string
 ---@field pathname string
@@ -27,42 +27,42 @@
 ---@field dir_set boolean
 ---@field identifier string
 
----@class luarocks.rockspec.test
+---@class luarocks.Rockspec.test
 ---@field type string
 ---@field script string
 ---@field command string
 ---@field busted_executable string
 ---@field flags string[]
 
----@class luarocks.rockspec.dependencies
+---@class luarocks.Rockspec.dependencies
 ---@field [number] string
----@field queries luarocks.rockspec.query[]
+---@field queries luarocks.Rockspec.query[]
 
----@class luarocks.rockspec.hooks
+---@class luarocks.Rockspec.hooks
 ---@field post_install string
 ---@field substituted_variables boolean
 
----@class luarocks.rockspec.deploy
+---@class luarocks.Rockspec.deploy
 ---@field wrap_bin_scripts boolean
 
----@class luarocks.rockspec
+---@class luarocks.Rockspec
 ---@field rockspec_format string
 ---@field name string -- not in the rockspec definition but used
 ---@field ["package"] string
 ---@field version string
 ---@field local_abs_filename string
 ---@field rocks_provided { [string]: string }
----@field source luarocks.rockspec.source
----@field description luarocks.rockspec.description
----@field build luarocks.rockspec.build
----@field dependencies luarocks.rockspec.dependencies
----@field build_dependencies luarocks.rockspec.dependencies
----@field test_dependencies luarocks.rockspec.dependencies
+---@field source luarocks.Rockspec.source
+---@field description luarocks.Rockspec.description
+---@field build luarocks.Rockspec.build
+---@field dependencies luarocks.Rockspec.dependencies
+---@field build_dependencies luarocks.Rockspec.dependencies
+---@field test_dependencies luarocks.Rockspec.dependencies
 ---@field supported_platforms string[]
 ---@field external_dependencies { [string]: { [string]: string } }
 ---@field variables { [string]: string }
----@field hooks luarocks.rockspec.hooks
----@field test luarocks.rockspec.test
----@field deploy luarocks.rockspec.deploy
----@field format_is_at_least fun(self: luarocks.rockspec, format: string): boolean
----@field type fun(self: luarocks.rockspec): "rockspec"
+---@field hooks luarocks.Rockspec.hooks
+---@field test luarocks.Rockspec.test
+---@field deploy luarocks.Rockspec.deploy
+---@field format_is_at_least fun(self: luarocks.Rockspec, format: string): boolean
+---@field type fun(self: luarocks.Rockspec): "rockspec"
