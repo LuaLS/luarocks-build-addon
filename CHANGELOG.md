@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Plugins are now placed in `lua_modules/share/lua/5.4`, allowing them to access modules in the LuaRocks tree. Their name is set to the rock's name.
+- Multi-file plugins (written as `plugin.lua` and files in a `plugin/` folder) are bundled into one file.
+
 ## [v0.1.1-1]
 
 ### Fixed
@@ -17,46 +22,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
--   Try to fix deployment issues with rockspec and CD (7)
+- Try to fix deployment issues with rockspec and CD (7)
 
 ## [v0.1.0-7]
 
 ### Fixed
 
--   Try to fix deployment issues with rockspec and CD (6)
+- Try to fix deployment issues with rockspec and CD (6)
 
 ## [v0.1.0-6]
 
 ### Fixed
 
--   Try to fix deployment issues with rockspec and CD (5)
+- Try to fix deployment issues with rockspec and CD (5)
 
 ## [v0.1.0-5]
 
 ### Fixed
 
--   Try to fix deployment issues with rockspec and CD (4)
+- Try to fix deployment issues with rockspec and CD (4)
 
 ## [v0.1.0-4]
 
 ### Fixed
 
--   Try to fix deployment issues with rockspec and CD (3)
+- Try to fix deployment issues with rockspec and CD (3)
 
 ## [v0.1.0-3]
 
 ### Fixed
 
--   Try to fix deployment issues with rockspec and CD (2)
+- Try to fix deployment issues with rockspec and CD (2)
 
 ## [v0.1.0-2]
 
 ### Fixed
 
--   Try to fix deployment issues with rockspec and CD
+- Try to fix deployment issues with rockspec and CD
 
 ## [v0.1.0-1]
 
 ### Added
 
--   Initial public release. See the [README](https://github.com/LuaLS/luarocks-build-addon/tree/v0.1.0-1) for the initial feature set.
+- Initial public release. See the [README](https://github.com/LuaLS/luarocks-build-addon/tree/v0.1.0-1) for the initial feature set.
