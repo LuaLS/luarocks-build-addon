@@ -23,13 +23,14 @@ local function path(...)
 end
 
 ---@param p string
----@return fun(): string
+---@return fun(): string?
 local function dir(p)
-	local iterator = lfs.dir(p)
+	local iterator, dir_mt = lfs.dir(p)
+
 	return function()
-		local result = iterator:next()
+		local result = iterator(dir_mt)
 		while result == "." or result == ".." do
-			result = iterator:next()
+			result = iterator(dir_mt)
 		end
 
 		return result
