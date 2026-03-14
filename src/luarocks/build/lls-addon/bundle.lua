@@ -55,8 +55,6 @@ local function addDirectory(strings, modulePath, dirName)
 			end
 		elseif fs.is_dir(entry) then
 			addDirectory(strings, modulePath, entry)
-		else
-			error("unknown file type")
 		end
 		::continue::
 	end
