@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.1-1]
+
+### Fixed
+
+- `library/` and `plugin.lua` install to the correct directory when built from a different directory.
+
 ## [v0.1.0-8]
 
 ### Fixed
