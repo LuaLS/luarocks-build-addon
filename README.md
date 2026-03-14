@@ -4,13 +4,13 @@ A build backend for installing [lua-language-server](https://github.com/LuaLS/lu
 
 Its effects are as follows:
 
--   Compile a "patch" that describes what settings will be added to LuaLS config files.
-    -   paths can be customized
--   Look for LuaLS config files in the project directory by default, prioritizing `./.luarc.json`, then looking for a `./.vscode/settings.json`, and defaulting to creating a new `.luarc.json` otherwise.
-    -   can be customized
--   If the `--no-install` option is given, processing stops here.
--   Apply the "patch" into every discovered file. File entries may be overwritten
--   Install any other assets (`library/` and `plugin.lua`)
+- Compile a "patch" that describes what settings will be added to LuaLS config files.
+    - paths can be customized
+- Look for LuaLS config files in the project directory by default, prioritizing `./.luarc.json`, then looking for a `./.vscode/settings.json`, and defaulting to creating a new `.luarc.json` otherwise.
+    - can be customized
+- If the `--no-install` option is given, processing stops here.
+- Apply the "patch" into every discovered file. File entries may be overwritten
+- Install any other assets (`library/` and `plugin.lua`)
 
 ## Usage for End-Users
 
@@ -19,10 +19,10 @@ Its effects are as follows:
 
 End-users can manage addon installations using the LuaRocks CLI.
 
--   `luarocks install an-addon` - install `an-addon`
--   `luarocks remove an-addon` - remove `an-addon`
--   `luarocks show an-addon` - view information about `an-addon`
--   etc.
+- `luarocks install an-addon` - install `an-addon`
+- `luarocks remove an-addon` - remove `an-addon`
+- `luarocks show an-addon` - view information about `an-addon`
+- etc.
 
 Users can also browse addons online from https://luarocks.org/m/lls-addons.
 
@@ -30,10 +30,10 @@ Users can also browse addons online from https://luarocks.org/m/lls-addons.
 
 You can change the behavior of the installer by defining these variables in a `config-5.X.lua` file or on the command-line as `luarocks VAR=VALUE -- ...`. See the [config file format](https://github.com/luarocks/luarocks/blob/main/docs/config_file_format.md#variables) for more information.
 
--   **LLSADDON_LUARCPATH** (`;`-separated paths) - a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
--   **LLSADDON_VSCSETTINGSPATH** (`;`-separated paths) - a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon. This is useful for creating VSCode settings files if they don't exist, since `.luarc.json` usually takes priority. Set this to `.vscode/settings.json` if you want this behavior.
-    -   If at least one of the above variables is set to anything but the empty string, the installer will not look for default config locations. Set to `;` to prohibit modifying any config files.
--   **LLSADDON_ABSPATH** (boolean) - If set to any value _other than_ `false`, `no`, `off`, or `0`, any paths added to the config file will be absolute paths instead of relative ones.
+- **LLSADDON_LUARCPATH** (`;`-separated paths) - a list of paths indicating which `.luarc.json`-style files to modify when installing the addon.
+- **LLSADDON_VSCSETTINGSPATH** (`;`-separated paths) - a list of paths indicating which `.vscode/settings.json`-style files to modify when installing the addon. This is useful for creating VSCode settings files if they don't exist, since `.luarc.json` usually takes priority. Set this to `.vscode/settings.json` if you want this behavior.
+    - If at least one of the above variables is set to anything but the empty string, the installer will not look for default config locations. Set to `;` to prohibit modifying any config files.
+- **LLSADDON_ABSPATH** (boolean) - If set to any value _other than_ `false`, `no`, `off`, or `0`, any paths added to the config file will be absolute paths instead of relative ones.
 
 ## Usage for Addon Developers
 
@@ -43,7 +43,12 @@ Addon developers should use an addon file structure like this:
 .
 ├── [addon name]-[version]-[revision].rockspec  # required
 ├── library/     # optional
-└── plugin.lua   # optional
+│   ├── more-files.lua
+│   └── ...
+├── plugin.lua   # optional
+└── plugin/     # optional
+    ├── more-files.lua
+    └── ...
 ```
 
 See the [Creating an Addon](https://luals.github.io/wiki/addons/#creating-an-addon) section for more information on the individual components.
@@ -61,7 +66,7 @@ Addons can be developed in a similar way to any other rock. Dependencies to othe
 
 ### Build Rules
 
--   **build.settings** (table?) - May contain a key-value dictionary of [settings](https://luals.github.io/wiki/settings/) to be merged into the LuaLS configuration. The `config.json` file will be ignored if this entry exists.
+- **build.settings** (table?) - May contain a key-value dictionary of [settings](https://luals.github.io/wiki/settings/) to be merged into the LuaLS configuration. The `config.json` file will be ignored if this entry exists.
 
 ### Example
 
