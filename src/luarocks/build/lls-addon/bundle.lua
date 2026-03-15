@@ -24,7 +24,7 @@ local function formatPreloadFile(path, moduleName)
 	local text = assertContext("when reading from bundled file", f:read("a"))
 
 	local maxChainEqs = -1
-	for chain in string.gmatch(text, "%](%=+)%]") do
+	for chain in string.gmatch(text, "%](%=*)%]") do
 		maxChainEqs = math.max(maxChainEqs, string.len(chain))
 	end
 

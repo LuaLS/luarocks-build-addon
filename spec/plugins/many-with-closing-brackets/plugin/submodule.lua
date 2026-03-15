@@ -1,0 +1,3 @@
+return [[
+some text
+]]
