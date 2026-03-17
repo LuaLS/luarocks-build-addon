@@ -3,7 +3,32 @@ local fs = require("luarocks.fs")
 
 local log = require("luarocks.build.lls-addon.log")
 
-local PRELOAD_FORMAT = 'package.preload["%s"] = assert(load([%s[\n%s\n]%s], "%s"))'
+local OVERRIDE_REQUIRE = [[
+assert(type((...)) == "function", "attempt to require a plugin")
+
+do
+  local loaded = setmetatable({}, { __index = function() return false end })
+  local preload = {}
+  local oldRequire = require
+  function require(path, ...)
+    local loadedModule = loaded[path]
+    if loadedModule ~= false then
+      return loadedModule
+    end
+
+    local moduleLoader = preload[path]
+    if not moduleLoader then
+      return oldRequire(path, ...)
+    end
+
+    loadedModule = moduleLoader(path, ":preload:")
+    loaded[path] = loadedModule
+    return loadedModule
+  end]]
+
+local PRELOAD_FORMAT = '  preload["%s"] = assert(load([%s[\n%s\n]%s], "%s", "t"))'
+
+local OVERRIDE_REQUIRE_END = "end"
 
 local function assertContext(context, ...)
 	-- luacov: disable
@@ -39,10 +64,6 @@ local function addDirectory(strings, modulePath, dirName)
 	fs.change_dir(dirName)
 	table.insert(modulePath, dirName)
 	for entry in fs.dir(".") do
-		if entry == "." or entry == ".." then
-			goto continue
-		end
-
 		if fs.is_file(entry) then
 			local filename = string.match(entry, "^([^%.]+)%.lua$")
 			if filename then
@@ -72,7 +93,9 @@ local function bundle(filename, destination)
 	local strings = {} ---@type string[]
 	if fs.is_dir(dir.path(fs.current_dir(), filename)) then
 		log.info("found bundled files directory at " .. filename .. "/, adding to bundle...")
+		table.insert(strings, OVERRIDE_REQUIRE)
 		addDirectory(strings, {}, filename)
+		table.insert(strings, OVERRIDE_REQUIRE_END)
 	end
 
 	log.info("adding main file " .. filename .. ".lua to bundle...")
