@@ -1,8 +1,11 @@
 ---@meta
 
----@class luarocks.Tree
+---@class luarocks.core.Tree
 ---@field name string
----@field path string
+---@field root string
+---@field rocks_dir string?
+---@field lua_dir string?
+---@field lib_dir string?
 
 ---@class luarocks.core.cfg.cache
 ---@field luajit_version_checked boolean?
@@ -25,13 +28,13 @@
 ---@field include string | string[]
 
 ---@class luarocks.core.cfg
----@field root_dir string | luarocks.Tree | nil
+---@field root_dir string | luarocks.core.Tree | nil
 ---@field rocks_dir string | nil
 ---@field rocks_subdir string
 ---@field lua_modules_path string
 ---@field lib_modules_path string
 ---@field aggressive_cache boolean | nil
----@field rocks_trees (string | luarocks.Tree)[]
+---@field rocks_trees (string | luarocks.core.Tree)[]
 ---@field lua_version string
 ---@field deps_mode "one" | "all" | "none"
 ---@field deploy_bin_dir string
@@ -115,6 +118,6 @@ function cfg.is_platform(platform) end
 ---@return string platforms
 function cfg.print_platforms() end
 
----@param tree string | luarocks.Tree
+---@param tree string | luarocks.core.Tree
 ---@return string LUA_PATH, string LUA_CPATH, string PATH
 function cfg.package_paths(tree) end
