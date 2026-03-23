@@ -11,7 +11,8 @@
 			"lua_modules/share/lua/5.4/?.lua",
 			"lua_modules/share/lua/5.4/?/init.lua"
 		],
-		"version": "Lua 5.4"
+		"version": "Lua 5.5",
+		"plugin": ["./lua_modules/share/lua/5.5/luarocks/lls-addon-loader.lua"]
 	},
 	"workspace": {
 		"checkThirdParty": false,
@@ -19,7 +20,8 @@
 			"${addons}/luafilesystem/module/library",
 			"${addons}/busted/module/library",
 			"${addons}/luassert/module/library",
-			"$USERPROFILE/Documents/References/luarocks/src"
+			"$USERPROFILE/Documents/References/luarocks/src",
+			"types"
 		]
 	}
 }
