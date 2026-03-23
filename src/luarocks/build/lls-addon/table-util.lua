@@ -139,6 +139,7 @@ local nestedPath = {
 		end
 	end,
 }
+M.nestedPath = nestedPath
 
 ---@type lls-addon.path-getter
 local unnestedPath = {
@@ -149,6 +150,7 @@ local unnestedPath = {
 		t[path] = v
 	end,
 }
+M.unnestedPath = unnestedPath
 
 ---modifies `old` such that it contains all the properties of `new`.
 ---
