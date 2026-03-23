@@ -16,7 +16,7 @@ dependencies = {
 
 test_dependencies = {
 	"luarocks >= 3.11.1",
-	"busted ~> 2.2",
+	"busted ~> 2.3",
 	"luafilesystem ~> 1.9",
 	"inspect ~> 3.1",
 	"md5 ~> 1.3",
