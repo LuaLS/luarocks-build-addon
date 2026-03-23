@@ -10,6 +10,10 @@ description = {
 	license = "MIT",
 }
 
+dependencies = {
+	"goldenstein64/luarocks-loader >= 3.11.1",
+}
+
 test_dependencies = {
 	"luarocks >= 3.11.1",
 	"busted ~> 2.2",
