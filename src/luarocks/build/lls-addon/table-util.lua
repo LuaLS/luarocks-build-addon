@@ -111,6 +111,7 @@ local nestedPath = {
 
 		local subTs = { t }
 		local subT = t
+		local doSetKey = true
 		for i = 1, #keys - 1 do
 			local k = keys[i]
 			local found = subT[k]
@@ -120,12 +121,14 @@ local nestedPath = {
 				local newT = json.object({})
 				subT, subT[k] = newT, newT
 			else
-				goto stopSettingKeys
+				doSetKey = false
+				break
 			end
 			table.insert(subTs, subT)
 		end
-		subT[keys[#keys]] = v
-		::stopSettingKeys::
+		if doSetKey then
+			subT[keys[#keys]] = v
+		end
 
 		if v == nil then
 			-- remove any empty objects this created
