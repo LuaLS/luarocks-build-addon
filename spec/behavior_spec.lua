@@ -160,6 +160,17 @@ end
 ---@type "path/to/lls-addon-loader.lua"
 local FAKE_LOADER_SOURCE = path("path", "to", "lls-addon-loader.lua")
 
+---@param projectDir string?
+local function stubFakeLoaderSource(projectDir)
+	local oldIsFile = luarocks.fs.is_file
+	local cd = projectDir and path(luarocks.fs.current_dir(), projectDir) or luarocks.fs.current_dir()
+	local absoluteFakeLoaderSource =
+		luarocks.fs.absolute_name(FAKE_LOADER_SOURCE, path(luarocks.fs.current_dir(), projectDir))
+	stub(luarocks.fs, "is_file", function(filePath)
+		return filePath == FAKE_LOADER_SOURCE or filePath == absoluteFakeLoaderSource or oldIsFile(filePath)
+	end)
+end
+
 ---@param options? lls-addon.spec.makeProject.options
 local function makeProject(options)
 	options = options or {}
@@ -214,6 +225,7 @@ local function setupProject(dir, options)
 	assertNoRoot(dir)
 	finally = upgradeFinally(finally)
 	pushDir(dir)
+	stubFakeLoaderSource(options and options.projectDir)
 	makeProject(options)
 end
 
@@ -439,7 +451,8 @@ describe("luarocks-build-lls-addon", function()
 		assert.is_nil(mode(path(INSTALL_DIR, "library")))
 		assert.is_nil(mode(".luarc.json"))
 		assert.is_nil(mode(path(INSTALL_DIR, "config.json")))
-		assert.is_nil(mode(path(LUA_DIR, "types.lua")))
+		assert.is_nil(mode(path(INSTALL_DIR, "plugin.lua")))
+		assert.is_nil(mode(path(INSTALL_DIR, "plugin")))
 	end)
 
 	it("installs to unique paths", function()

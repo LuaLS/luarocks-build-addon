@@ -137,8 +137,12 @@ describe("lls-addon", function()
 					dedup = true,
 					key = "workspace.library",
 					value = path(ROCKS_DIR, INSTALL_DIR, "library"),
-				} --[[@as lls-addon.config-entry.append]],
-			}, configEntries)
+				},
+				{
+					action = "remove-deleted-versions",
+					key = "workspace.library",
+				},
+			} --[[@as lls-addon.config-entry[] ]], configEntries)
 			assert.are_same({
 				{
 					type = "directory",
@@ -163,14 +167,18 @@ describe("lls-addon", function()
 					dedup = true,
 					key = "runtime.plugin",
 					value = LOADER_SOURCE,
-				} --[[@as lls-addon.config-entry.prepend]],
+				},
 				{
 					action = "append",
 					dedup = true,
 					key = "runtime.plugin",
 					value = path(ROCKS_DIR, installDir("lls-addon-types", VERSION), "plugin.lua"),
-				} --[[@as lls-addon.config-entry.append]],
-			}, configEntries)
+				},
+				{
+					action = "remove-deleted-versions",
+					key = "runtime.plugin",
+				},
+			} --[[@as lls-addon.config-entry[] ]], configEntries)
 			assert.are_same({
 				{
 					type = "file",
@@ -196,14 +204,18 @@ describe("lls-addon", function()
 					dedup = true,
 					key = "runtime.plugin",
 					value = LOADER_SOURCE,
-				} --[[@as lls-addon.config-entry.prepend]],
+				},
 				{
 					action = "append",
 					dedup = true,
 					key = "runtime.plugin",
 					value = path(ROCKS_DIR, installDir("lls-addon-types", VERSION), "plugin.lua"),
-				} --[[@as lls-addon.config-entry.append]],
-			}, configEntries)
+				},
+				{
+					action = "remove-deleted-versions",
+					key = "runtime.plugin",
+				},
+			} --[[@as lls-addon.config-entry[] ]], configEntries)
 			assert.are_same({
 				{
 					type = "file",
@@ -384,6 +396,10 @@ describe("lls-addon", function()
 					value = path(ROCKS_DIR, INSTALL_DIR, "library"),
 				},
 				{
+					action = "remove-deleted-versions",
+					key = "workspace.library",
+				},
+				{
 					action = "prepend",
 					dedup = true,
 					key = "runtime.plugin",
@@ -396,13 +412,17 @@ describe("lls-addon", function()
 					value = path(ROCKS_DIR, INSTALL_DIR, "plugin.lua"),
 				},
 				{
+					action = "remove-deleted-versions",
+					key = "runtime.plugin",
+				},
+				{
 					action = "merge",
 					value = {
 						["workspace.library"] = { "anotherLibrary" },
 						["runtime.plugin"] = "anotherPlugin.lua",
 					},
 				},
-			}, configEntries)
+			} --[[@as lls-addon.config-entry[] ]], configEntries)
 			assert.are_equal(2, #installEntries)
 			assert.contains({
 				type = "directory",

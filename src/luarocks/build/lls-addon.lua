@@ -245,11 +245,16 @@ end
 ---@field action "merge"
 ---@field value { [string]: unknown }
 
+---@class lls-addon.config-entry.remove-deleted-versions
+---@field action "remove-deleted-versions"
+---@field key string
+
 ---@alias lls-addon.config-entry
 ---| lls-addon.config-entry.append
 ---| lls-addon.config-entry.prepend
 ---| lls-addon.config-entry.set
 ---| lls-addon.config-entry.merge
+---| lls-addon.config-entry.remove-deleted-versions
 
 ---@class lls-addon.install-entry
 ---@field type "file" | "directory"
@@ -301,6 +306,11 @@ local function compileLuarc(rockspec, env)
 			value = formattedLibraryDestination,
 		} --[[@as lls-addon.config-entry.append]])
 
+		table.insert(configEntries, {
+			action = "remove-deleted-versions",
+			key = "workspace.library",
+		} --[[@as lls-addon.config-entry.remove-deleted-versions]])
+
 		table.insert(installEntries, {
 			type = "directory",
 			source = librarySource,
@@ -337,6 +347,11 @@ local function compileLuarc(rockspec, env)
 			dedup = true,
 			value = formattedPluginDestination,
 		} --[[@as lls-addon.config-entry.append]])
+
+		table.insert(configEntries, {
+			action = "remove-deleted-versions",
+			key = "runtime.plugin",
+		} --[[@as lls-addon.config-entry.remove-deleted-versions]])
 
 		table.insert(installEntries, {
 			type = "file",
@@ -450,13 +465,13 @@ local function tableFind(list, value)
 	return nil
 end
 
+---@param pointsToWrongVersion fun(path: string): boolean
 ---@param config { [string]: any }
 ---@param configEntries lls-addon.config-entry[]
 ---@param luarcType "vscode settings" | "luarc"
-local function applyConfigEntries(config, configEntries, luarcType)
+local function applyConfigEntries(pointsToWrongVersion, config, configEntries, luarcType)
 	local prefix = ""
 	local nested ---@type boolean
-	local transformMerge ---@type fun(config: { [string]: any }): { [string]: any }
 	if luarcType == "vscode settings" then
 		prefix = "Lua."
 		nested = false
@@ -487,7 +502,7 @@ local function applyConfigEntries(config, configEntries, luarcType)
 			local oldValue2_isArray = json.isArray(oldValue2)
 			if oldValue1_isArray and oldValue2_isArray then
 				secondary.set(config, key, nil)
-				extend(nested, oldValue1, unnest2(transformMerge(oldValue2)))
+				extend(nested, oldValue1, unnest2(oldValue2))
 				list = oldValue1
 			elseif oldValue2_isArray then
 				list = oldValue2
@@ -517,6 +532,36 @@ local function applyConfigEntries(config, configEntries, luarcType)
 			else
 				extend(nested, config, value)
 			end
+		elseif action == "remove-deleted-versions" then
+			---@cast entry lls-addon.config-entry.remove-deleted-versions
+			local key = prefix .. entry.key
+
+			local list ---@type string[]
+			do
+				local oldValue1 = primary.get(config, key)
+				local oldValue1_isArray = json.isArray(oldValue1)
+				local oldValue2 = secondary.get(config, key)
+				local oldValue2_isArray = json.isArray(oldValue2)
+				if oldValue1_isArray and oldValue2_isArray then
+					secondary.set(config, key, nil)
+					extend(nested, oldValue1, unnest2(oldValue2))
+					list = oldValue1
+				elseif oldValue2_isArray then
+					list = oldValue2
+				elseif oldValue1_isArray then
+					list = oldValue1
+				else
+					list = json.array({})
+					primary.set(config, key, list)
+				end
+			end
+
+			for i = #list, 1, -1 do
+				local v = list[i]
+				if pointsToWrongVersion(v) then
+					table.remove(list, i)
+				end
+			end
 		elseif action == "set" then
 			---@cast entry lls-addon.config-entry.set
 			local key, value = prefix .. entry.key, entry.value
@@ -538,15 +583,31 @@ local function applyConfigEntries(config, configEntries, luarcType)
 	end
 end
 
+---@param rockspec luarocks.Rockspec
 ---@param luarcFiles lls-addon.luarc-file[]
 ---@param configEntries lls-addon.config-entry[]
-local function installLuarcFiles(luarcFiles, configEntries)
+local function installLuarcFiles(rockspec, luarcFiles, configEntries)
+	local pointsToWrongVersion
+	do
+		local projectDir = getProjectDir()
+		local packageDir = dir.path(path.rocks_dir(), rockspec.package)
+		local packageDirLen = string.len(packageDir)
+		local currentVersionDir = dir.path(packageDir, rockspec.version)
+		local currentVersionDirLen = string.len(currentVersionDir)
+
+		function pointsToWrongVersion(installPath)
+			local absPath = fs.absolute_name(installPath, projectDir)
+			return string.sub(absPath, 1, packageDirLen) == packageDir
+				and string.sub(absPath, 1, currentVersionDirLen) ~= currentVersionDir
+		end
+	end
+
 	for _, luarcFile in ipairs(luarcFiles) do
 		local type = luarcFile.type
 		local path = luarcFile.path
 		log.info(string.format("writing to %s: %s", type, path))
 		local oldConfig = readOrCreateLuarc(path)
-		applyConfigEntries(oldConfig, configEntries, type)
+		applyConfigEntries(pointsToWrongVersion, oldConfig, configEntries, type)
 		json.write(path, oldConfig, { sortKeys = true })
 	end
 end
@@ -577,10 +638,10 @@ local function installAddon(rockspec, env, noInstall)
 		return
 	end
 
-	installLuarcFiles(luarcFiles, configEntries)
-
 	-- for copying library, plugin.lua, and config.json
 	installFiles(installEntries)
+
+	installLuarcFiles(rockspec, luarcFiles, configEntries)
 end
 M.installAddon = installAddon
 
