@@ -22,4 +22,12 @@ if fs.exists(lua_modules:string()) then
 	table.insert(cfg.rocks_trees, 1, { name = "project", root = lua_modules:string() } --[[@as luarocks.core.Tree]])
 end
 
+-- because of how `plugin.dispatch` works, leaving these functions undefined
+-- means plugins defined later can't use these callbacks!
+-- all thanks to this line: https://github.com/LuaLS/lua-language-server/blob/0187ddf19f940d8b9b95d916d73f4660ec417471/script/plugin.lua#L35
+
+function OnSetText() end
+function OnTransformAst() end
+function ResolveRequire() end
+
 print("luarocks-build-lls-addon: loader finished!")
