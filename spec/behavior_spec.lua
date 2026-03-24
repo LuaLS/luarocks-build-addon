@@ -2,9 +2,9 @@ local lfs = require("lfs") ---@type LuaFileSystem
 
 local luarocks = {
 	---@type luarocks.core.cfg
-	cfg = require("luarocks.core.cfg"),
-	fs = require("luarocks.fs"),
-	path = require("luarocks.path"),
+	cfg = require("luarocks.core.cfg") --[[@as luarocks.core.cfg]],
+	fs = require("luarocks.fs") --[[@as luarocks.fs]],
+	path = require("luarocks.path") --[[@as luarocks.path]],
 	util = require("luarocks.util"),
 	cmd = {
 		init = require("luarocks.cmd.init"),
@@ -12,12 +12,15 @@ local luarocks = {
 	},
 }
 
+require("luarocks.cmd.install") -- sets deps.installer
 local json = require("luarocks.build.lls-addon.json-util")
+local llsAddon = require("luarocks.build.lls-addon")
 local log = require("luarocks.build.lls-addon.log")
 
 local upgradeFinally = require("spec.util.upgrade-finally")
 
-assert(_VERSION == "Lua 5.4", "version is not Lua 5.4")
+local TARGET_VERSION = "5.4"
+assert(_VERSION == "Lua " .. TARGET_VERSION, "version is not Lua " .. TARGET_VERSION)
 
 local SEP = package.config:sub(1, 1)
 ---@param ... string
@@ -45,8 +48,9 @@ local function path(...)
 	return table.concat(parts, SEP)
 end
 
-local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", "types", "0.1-1")
-local LUA_DIR = path("lua_modules", "share", "lua", "5.4")
+---@type "lua_modules/lib/luarocks/rocks-5.4/types/0.1-1"
+local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-" .. TARGET_VERSION, "types", "0.1-1")
+local LUA_DIR = path("lua_modules", "share", "lua", TARGET_VERSION) ---@type "lua_modules/share/lua/5.4"
 
 ---@param path string
 ---@return string? mode
@@ -153,6 +157,9 @@ local function pushDir(dirPath)
 	end)
 end
 
+---@type "path/to/lls-addon-loader.lua"
+local FAKE_LOADER_SOURCE = path("path", "to", "lls-addon-loader.lua")
+
 ---@param options? lls-addon.spec.makeProject.options
 local function makeProject(options)
 	options = options or {}
@@ -166,6 +173,7 @@ local function makeProject(options)
 	stub(luarocks.util, "printout")
 	stub(luarocks.util, "warning")
 	stub(luarocks.util, "printerr")
+	stub(llsAddon, "getLoaderSource", FAKE_LOADER_SOURCE)
 	local logMock = mock(log, --[[stub:]] true)
 
 	local oldProjectDir = luarocks.cfg.project_dir
@@ -251,7 +259,12 @@ describe("luarocks-build-lls-addon", function()
 		assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
-			runtime = { plugin = path(LUA_DIR, "types.lua") },
+			runtime = {
+				plugin = {
+					FAKE_LOADER_SOURCE,
+					path(LUA_DIR, "types.lua"),
+				},
+			},
 		}, luarc)
 	end)
 
@@ -273,7 +286,12 @@ describe("luarocks-build-lls-addon", function()
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			workspace = { library = { path(INSTALL_DIR, "library") } },
-			runtime = { plugin = path(LUA_DIR, "types.lua") },
+			runtime = {
+				plugin = {
+					FAKE_LOADER_SOURCE,
+					path(LUA_DIR, "types.lua"),
+				},
+			},
 		}, luarc)
 	end)
 
@@ -284,7 +302,12 @@ describe("luarocks-build-lls-addon", function()
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			example = true,
-			runtime = { plugin = path(LUA_DIR, "types.lua") },
+			runtime = {
+				plugin = {
+					FAKE_LOADER_SOURCE,
+					path(LUA_DIR, "types.lua"),
+				},
+			},
 		}, luarc)
 	end)
 
@@ -297,7 +320,12 @@ describe("luarocks-build-lls-addon", function()
 		assert.are_same({
 			workspace = { library = { path(INSTALL_DIR, "library") } },
 			example = true,
-			runtime = { plugin = path(LUA_DIR, "types.lua") },
+			runtime = {
+				plugin = {
+					FAKE_LOADER_SOURCE,
+					path(LUA_DIR, "types.lua"),
+				},
+			},
 		}, luarc)
 	end)
 
@@ -371,7 +399,12 @@ describe("luarocks-build-lls-addon", function()
 		assert.are_same({
 			hover = { enable = true },
 			workspace = { library = { path(cd, INSTALL_DIR, "library") } },
-			runtime = { plugin = path(cd, LUA_DIR, "types.lua") },
+			runtime = {
+				plugin = {
+					FAKE_LOADER_SOURCE,
+					path(cd, LUA_DIR, "types.lua"),
+				},
+			},
 		}, luarc)
 	end)
 

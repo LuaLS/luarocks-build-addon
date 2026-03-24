@@ -1,6 +1,7 @@
 local cfg = require("luarocks.core.cfg")
-local fs = require("luarocks.fs")
-local pathMod = require("luarocks.path")
+local fs = require("luarocks.fs") --[[@as luarocks.fs]]
+
+local pathMod = require("luarocks.path") --[[@as luarocks.path]]
 
 local json = require("luarocks.build.lls-addon.json-util")
 local llsAddon = require("luarocks.build.lls-addon")
@@ -36,6 +37,8 @@ local function stubFs(newStubs)
 		copy_contents = true,
 		make_dir = true,
 		exists = false,
+		is_dir = false,
+		is_file = false,
 	}
 
 	for k, v in pairs(newStubs) do
@@ -70,14 +73,17 @@ local function pathEquals(...)
 end
 
 describe("lls-addon", function()
-	local PACKAGE = makeRockspec.defaultPackage
-	local VERSION = makeRockspec.defaultVersion
+	local PACKAGE = makeRockspec.defaultPackage --[[@as "test"]]
+	local VERSION = makeRockspec.defaultVersion --[[@as "0.1-1"]]
 
-	local CURRENT_DIR = path("fake", "path", "to", "types")
-	local ROCKS_DIR = path("fake", "path", "to", "rocks")
+	local CURRENT_DIR = path("fake", "path", "to", "types") --[[@as "fake/path/to/types"]]
+	local ROCKS_DIR = path("fake", "path", "to", "rocks") --[[@as "fake/path/to/rocks"]]
 
-	local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", PACKAGE, VERSION)
-	local LUA_DIR = path("lua_modules", "share", "lua", "5.4")
+	local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", PACKAGE, VERSION) --[[@as "lua_modules/lib/luarocks/rocks-5.4/test/0.1-1"]]
+	local LUA_DIR = path("lua_modules", "share", "lua", "5.4") --[[@as "lua_modules/share/lua/5.5"]]
+
+	local LOADER_SOURCE = path("fake", "path", "to", "lls-addon-loader.lua")
+	stub(llsAddon, "getLoaderSource", LOADER_SOURCE)
 
 	lazy_setup(function()
 		cfg.init()
@@ -102,24 +108,31 @@ describe("lls-addon", function()
 
 			local rockspec = makeRockspec()
 
-			local luarc, installEntries = compileLuarc(rockspec, {})
-			assert.is_nil(luarc)
+			local configEntries, installEntries = compileLuarc(rockspec, {})
+			assert.are_equal(0, #configEntries)
 			assert.are_equal(0, #installEntries)
 			assert.stub(fs.copy).was.called(0)
 			assert.stub(fs.copy_contents).was.called(0)
-			assert.stub(fs.exists).was.called_with(path(CURRENT_DIR, "library"))
-			assert.stub(fs.exists).was.called_with(path(CURRENT_DIR, "plugin.lua"))
-			assert.stub(fs.exists).was.called_with(path(CURRENT_DIR, "config.json"))
+			assert.stub(fs.is_dir).was.called_with(path(CURRENT_DIR, "library"))
+			assert.stub(fs.is_file).was.called_with(path(CURRENT_DIR, "plugin.lua"))
+			assert.stub(fs.is_file).was.called_with(path(CURRENT_DIR, "config.json"))
 		end)
 
 		it("works when given a library", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = CURRENT_DIR,
-				exists = pathEquals(path(CURRENT_DIR, "library")),
+				is_dir = pathEquals(path(CURRENT_DIR, "library")),
 			})
-			local luarc, installEntries = compileLuarc(makeRockspec(), {})
-			assert.are_same({ ["workspace.library"] = { path(ROCKS_DIR, INSTALL_DIR, "library") } }, luarc)
+			local configEntries, installEntries = compileLuarc(makeRockspec(), {})
+			assert.are_same({
+				{
+					action = "append",
+					dedup = true,
+					key = "workspace.library",
+					value = path(ROCKS_DIR, INSTALL_DIR, "library"),
+				} --[[@as lls-addon.config-entry.append]],
+			}, configEntries)
 			assert.are_same({
 				{
 					type = "directory",
@@ -133,18 +146,41 @@ describe("lls-addon", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = CURRENT_DIR,
-				exists = pathEquals(path(CURRENT_DIR, "plugin.lua")),
+				is_file = pathEquals(path(CURRENT_DIR, "plugin.lua")),
 			})
 
 			local rockspec = makeRockspec({ package = "lls-addon-types" })
-			local luarc, installEntries = compileLuarc(rockspec, {})
-			assert.are_same({ ["runtime.plugin"] = path(ROCKS_DIR, LUA_DIR, "lls-addon-types.lua") }, luarc)
+			local configEntries, installEntries = compileLuarc(rockspec, {})
+			assert.are_same({
+				{
+					action = "prepend",
+					dedup = true,
+					key = "runtime.plugin",
+					value = LOADER_SOURCE,
+				} --[[@as lls-addon.config-entry.prepend]],
+				{
+					action = "append",
+					dedup = true,
+					key = "runtime.plugin",
+					value = path(ROCKS_DIR, LUA_DIR, "lls-addon-types.lua"),
+				} --[[@as lls-addon.config-entry.append]],
+			}, configEntries)
 			assert.are_same({
 				{
 					type = "bundle",
 					source = "plugin",
-					destination = path(ROCKS_DIR, LUA_DIR, "lls-addon-types.lua"),
-				},
+					destination = path(
+						ROCKS_DIR,
+						"lua_modules",
+						"lib",
+						"luarocks",
+						"rocks-5.4",
+						"lls-addon-types",
+						VERSION,
+						"lua",
+						"lls-addon-types.lua"
+					),
+				} --[[@as lls-addon.install-entry]],
 			}, installEntries)
 		end)
 
@@ -161,8 +197,18 @@ describe("lls-addon", function()
 					},
 				},
 			})
-			local luarc, installEntries = compileLuarc(rockspec, {})
-			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
+			local configEntries, installEntries = compileLuarc(rockspec, {})
+			assert.are_same({
+				{
+					action = "merge",
+					value = {
+						["some.example"] = 42,
+						another = {
+							example = 100,
+						},
+					},
+				} --[[@as lls-addon.config-entry.merge]],
+			}, configEntries)
 			assert.are_equal(0, #installEntries)
 		end)
 
@@ -179,7 +225,7 @@ describe("lls-addon", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = CURRENT_DIR,
-				exists = pathEquals(path(CURRENT_DIR, "config.json")),
+				is_file = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function()
 				return json.object({
@@ -191,8 +237,16 @@ describe("lls-addon", function()
 			end)
 
 			local rockspec = makeRockspec()
-			local luarc, installEntries = compileLuarc(rockspec, {})
-			assert.are_same({ ["some.example"] = 42, ["another.example"] = 100 }, luarc)
+			local configEntries, installEntries = compileLuarc(rockspec, {})
+			assert.are_same({
+				{
+					action = "merge",
+					value = {
+						["some.example"] = 42,
+						["another.example"] = 100,
+					},
+				} --[[@as lls-addon.config-entry.merge]],
+			}, configEntries)
 			assert.are_same({
 				{
 					type = "file",
@@ -208,7 +262,7 @@ describe("lls-addon", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = CURRENT_DIR,
-				exists = pathEquals(path(CURRENT_DIR, "config.json")),
+				is_file = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function()
 				return false
@@ -228,7 +282,7 @@ describe("lls-addon", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = CURRENT_DIR,
-				exists = pathEquals(path(CURRENT_DIR, "config.json")),
+				is_file = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function()
 				return json.object({ settings = false })
@@ -247,7 +301,7 @@ describe("lls-addon", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = CURRENT_DIR,
-				exists = pathEquals(path(CURRENT_DIR, "config.json")),
+				is_file = pathEquals(path(CURRENT_DIR, "config.json")),
 			})
 			local jsonRead = stub(json, "read", function(pathArg)
 				return nil, "this should not be called"
@@ -258,9 +312,14 @@ describe("lls-addon", function()
 					settings = { ["different.example"] = 96 },
 				},
 			})
-			local luarc, installEntries = compileLuarc(rockspec, {})
+			local configEntries, installEntries = compileLuarc(rockspec, {})
 
-			assert.are_same({ ["different.example"] = 96 }, luarc)
+			assert.are_same({
+				{
+					action = "merge",
+					value = { ["different.example"] = 96 },
+				},
+			}, configEntries)
 			assert.are_equal(0, #installEntries)
 			assert.stub(jsonRead).was.called(0)
 		end)
@@ -269,7 +328,8 @@ describe("lls-addon", function()
 			stubFs({
 				-- key = handler / return value
 				current_dir = CURRENT_DIR,
-				exists = pathEquals(path(CURRENT_DIR, "library"), path(CURRENT_DIR, "plugin.lua")),
+				is_dir = pathEquals(path(CURRENT_DIR, "library")),
+				is_file = pathEquals(path(CURRENT_DIR, "plugin.lua")),
 			})
 
 			local rockspec = makeRockspec({
@@ -281,14 +341,34 @@ describe("lls-addon", function()
 				},
 			})
 
-			local luarc, installEntries = compileLuarc(rockspec, {})
+			local configEntries, installEntries = compileLuarc(rockspec, {})
 			assert.are_same({
-				["workspace.library"] = {
-					path(ROCKS_DIR, INSTALL_DIR, "library"),
-					"anotherLibrary",
+				{
+					action = "append",
+					dedup = true,
+					key = "workspace.library",
+					value = path(ROCKS_DIR, INSTALL_DIR, "library"),
 				},
-				["runtime.plugin"] = "anotherPlugin.lua",
-			}, luarc)
+				{
+					action = "prepend",
+					dedup = true,
+					key = "runtime.plugin",
+					value = LOADER_SOURCE,
+				},
+				{
+					action = "append",
+					dedup = true,
+					key = "runtime.plugin",
+					value = path(ROCKS_DIR, LUA_DIR, PACKAGE .. ".lua"),
+				},
+				{
+					action = "merge",
+					value = {
+						["workspace.library"] = { "anotherLibrary" },
+						["runtime.plugin"] = "anotherPlugin.lua",
+					},
+				},
+			}, configEntries)
 			assert.are_equal(2, #installEntries)
 			assert.contains({
 				type = "directory",
@@ -298,7 +378,7 @@ describe("lls-addon", function()
 			assert.contains({
 				type = "bundle",
 				source = "plugin",
-				destination = path(ROCKS_DIR, LUA_DIR, PACKAGE .. ".lua"),
+				destination = path(ROCKS_DIR, INSTALL_DIR, "lua", PACKAGE .. ".lua"),
 			}, installEntries)
 		end)
 	end)
@@ -312,7 +392,7 @@ describe("lls-addon", function()
 		local currentDir = path("fake", "path", "to", "types")
 
 		it("gives .luarc.json when nothing is found", function()
-			stubFs({ current_dir = currentDir, exists = false })
+			stubFs({ current_dir = currentDir })
 
 			local files = findLuarcFiles(currentDir, {})
 			assert.are_same({ { type = "luarc", path = path(currentDir, ".luarc.json") } }, files)
@@ -321,7 +401,7 @@ describe("lls-addon", function()
 		it("looks for a .luarc.json", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, {})
@@ -331,7 +411,7 @@ describe("lls-addon", function()
 		it("looks for .vscode/settings.json", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, {})
@@ -344,7 +424,7 @@ describe("lls-addon", function()
 		it("prioritizes .luarc.json before .vscode/settings.json", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, {})
@@ -354,7 +434,7 @@ describe("lls-addon", function()
 		it("prioritizes environment variables before looking in projectDir", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local luarcPaths = table.concat({
@@ -379,7 +459,7 @@ describe("lls-addon", function()
 		it("looks in projectDir if environment variables are defined and empty", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = "", LUARCPATH = "" })
@@ -390,7 +470,7 @@ describe("lls-addon", function()
 		it("looks in projectDir if environment variables are defined and empty", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = "", LUARCPATH = "" })
@@ -401,7 +481,7 @@ describe("lls-addon", function()
 		it("looks in projectDir if only VSCSETTINGSPATH is defined and empty", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = "" })
@@ -412,7 +492,7 @@ describe("lls-addon", function()
 		it("looks in projectDir if only LUARCPATH is defined and empty", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { LUARCPATH = "" })
@@ -423,7 +503,7 @@ describe("lls-addon", function()
 		it("does not look in projectDir if environment variables are defined as ';'", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = ";", LUARCPATH = ";" })
@@ -433,7 +513,7 @@ describe("lls-addon", function()
 		it("does not look in projectDir if only VSCSETTINGSPATH is defined as ';'", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { VSCSETTINGSPATH = ";" })
@@ -443,7 +523,7 @@ describe("lls-addon", function()
 		it("does not look in projectDir if only LUARCPATH is defined as ';'", function()
 			stubFs({
 				current_dir = currentDir,
-				exists = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
+				is_file = pathEquals(path(currentDir, ".luarc.json"), path(currentDir, ".vscode", "settings.json")),
 			})
 
 			local files = findLuarcFiles(currentDir, { LUARCPATH = ";" })

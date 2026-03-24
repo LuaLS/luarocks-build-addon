@@ -1,7 +1,7 @@
 local cfg = require("luarocks.core.cfg") --[[@as luarocks.core.cfg]]
 local dir = require("luarocks.dir")
-local fs = require("luarocks.fs")
-local path = require("luarocks.path")
+local fs = require("luarocks.fs") --[[@as luarocks.fs]]
+local path = require("luarocks.path") --[[@as luarocks.path]]
 
 local bundle = require("luarocks.build.lls-addon.bundle")
 local json = require("luarocks.build.lls-addon.json-util")
@@ -10,10 +10,13 @@ local tableUtil = require("luarocks.build.lls-addon.table-util")
 
 local extend = tableUtil.extend
 local unnest2 = tableUtil.unnest2
+local nestedPath = tableUtil.nestedPath
 
+local unnestedPath = tableUtil.unnestedPath
 local DIR_SEP = string.sub(package.config, 1, 1)
 local PATH_SEP = string.sub(package.config, 3, 3)
 local PATH_SEP_PATTERN = "[^%" .. PATH_SEP .. "]+"
+local INTERROGATION_MARK = string.sub(package.config, 5, 5)
 
 local M = {}
 
@@ -23,6 +26,64 @@ local FALSY_STRINGS = {
 	["off"] = true,
 	["0"] = true,
 }
+
+---@generic S, M
+---@param context string
+---@param s S
+---@param msg? M
+---@param ... any
+---@return S s, M msg, any ...
+local function assertContext(context, s, msg, ...)
+	-- luacov: disable
+	if not s then
+		error(context .. ": " .. msg, 2)
+	end
+	return s, msg, ...
+	-- luacov: enable
+end
+
+do
+	---@param modulename string
+	---@param path string
+	---@param sep? string
+	---@param rep? string
+	---@return string searchPath
+	local function getSearchPath(modulename, path, sep, rep)
+		return (string.gsub(path, INTERROGATION_MARK, string.gsub(modulename, sep or "%.", rep or DIR_SEP)))
+	end
+
+	---@param modulename string
+	---@param paths? string
+	---@return string? filePath, string? errorMessage
+	local function searchPaths(modulename, paths)
+		paths = paths or package.path
+
+		local root_dir = assert(cfg.root_dir, "root_dir not set")
+		assert(fs.change_dir(path.rocks_tree_to_string(root_dir)))
+		for p in string.gmatch(paths, PATH_SEP_PATTERN) do
+			local filePath = getSearchPath(modulename, p)
+			if fs.exists(filePath) then
+				assert(fs.pop_dir())
+				return filePath
+			end
+		end
+
+		assert(fs.pop_dir())
+		return nil, "unable to find file"
+	end
+
+	local loaderSource ---@type string
+	function M.getLoaderSource()
+		-- if `require('luarocks.build.lls-addon')` worked, this should always work
+		if not loaderSource then
+			loaderSource =
+				assertContext("while finding 'luarocks.lls-addon-loader'", searchPaths("luarocks.lls-addon-loader")) --[[@as string]]
+			M.LOADER_SOURCE = loaderSource
+		end
+
+		return loaderSource
+	end
+end
 
 ---@param val string?
 ---@return boolean
@@ -35,32 +96,13 @@ local function parseFlag(val)
 end
 
 ---@param pathsString string?
----@return string[]? paths
+---@return (fun(): string?)? paths
 local function parsePathList(pathsString)
 	if pathsString == nil or pathsString == "" then
 		return nil
 	end
 
-	local paths = {}
-	for luarcPath in string.gmatch(pathsString, PATH_SEP_PATTERN) do
-		table.insert(paths, luarcPath)
-	end
-	return paths
-end
-
----@generic S, M
----@param context string
----@param s S
----@param msg? M
----@param ... any
----@return S s, M msg, any ...
-local function assertContext(context, s, msg, ...)
-	-- luacov: disable
-	if not s then
-		error(context .. ": " .. msg)
-	end
-	return s, msg, ...
-	-- luacov: enable
+	return string.gmatch(pathsString, PATH_SEP_PATTERN)
 end
 
 ---reads .luarc.json into a table, or returns a new one if it doesn't exist
@@ -124,11 +166,9 @@ local function getInstallDir(projectDir, rockspec, env)
 end
 M.getInstallDir = getInstallDir
 
----merges ('config.json').settings into .luarc.json
 ---@param sourcePath string
----@param luarc { [string]: any }
----@return { [string]: any } luarc
-local function copyConfigSettings(sourcePath, luarc)
+---@return { [string]: any } configSettings
+local function loadConfigSettings(sourcePath)
 	local config = json.read(sourcePath)
 
 	if not json.isObject(config) then
@@ -144,28 +184,24 @@ local function copyConfigSettings(sourcePath, luarc)
 				.. " is not an object. Submit an issue to the addon developer."
 		)
 	end
-	---@cast settings { [string]: any }
 
-	log.info("Merging 'settings' object into .luarc.json")
 	local settingsNoPrefix = json.object({})
 	for k, v in pairs(settings) do
 		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
 	end
 
-	return extend(false, luarc, unnest2(settingsNoPrefix))
+	return settingsNoPrefix
 end
 
 ---@param settings { [string]: any }
----@param luarc { [string]: any }
----@return { [string]: any } luarc
-local function copyBuildSettings(settings, luarc)
+---@return { [string]: any } settings
+local function loadBuildSettings(settings)
 	settings = json.coerce(settings)
 	if not json.isObject(settings) then
 		error("[BuildError]: 'rockspec.build.settings' is not an object. Submit an issue to the addon developer.")
 	end
 
-	log.info("Merging 'rockspec.build.settings' into .luarc.json")
-	return extend(false, luarc, unnest2(settings))
+	return settings
 end
 
 ---@param source string
@@ -188,6 +224,33 @@ local function copyDirectory(source, destination)
 	assertContext("when creating intermediate folders for " .. destination, fs.make_dir(destination))
 	assertContext("when copying files into " .. destination, fs.copy_contents(source, destination))
 end
+
+---@class lls-addon.config-entry.append
+---@field action "append"
+---@field key string
+---@field dedup boolean
+---@field value unknown
+
+---@class lls-addon.config-entry.prepend
+---@field action "prepend"
+---@field key string
+---@field dedup boolean
+---@field value unknown
+
+---@class lls-addon.config-entry.set
+---@field action "set"
+---@field key string
+---@field value unknown
+
+---@class lls-addon.config-entry.merge
+---@field action "merge"
+---@field value { [string]: unknown }
+
+---@alias lls-addon.config-entry
+---| lls-addon.config-entry.append
+---| lls-addon.config-entry.prepend
+---| lls-addon.config-entry.set
+---| lls-addon.config-entry.merge
 
 ---@class lls-addon.install-entry
 ---@field type "file" | "directory" | "bundle"
@@ -220,23 +283,27 @@ end
 ---to apply to the user's configuration files
 ---@param rockspec luarocks.Rockspec
 ---@param env { [string]: string? }
----@return { [string]: any }? luarc
+---@return lls-addon.config-entry[] configEntries
 ---@return lls-addon.install-entry[] installEntries
 local function compileLuarc(rockspec, env)
 	local projectDir = getProjectDir()
 	local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
 
-	local luarc ---@type { [string]: any }
+	local configEntries = {} ---@type lls-addon.config-entry[]
 	local installEntries = {} ---@type lls-addon.install-entry[]
 
 	local librarySource = dir.path(fs.current_dir(), "library")
-	if fs.exists(librarySource) then
+	if fs.is_dir(librarySource) then
 		local libraryDestination = dir.path(installDir, "library")
 		local formattedLibraryDestination = dir.path(formattedInstallDir, "library")
 
-		luarc = luarc or json.object({})
 		log.info("Adding " .. formattedLibraryDestination .. " to 'workspace.library' of .luarc.json")
-		luarc["workspace.library"] = json.array({ formattedLibraryDestination })
+		table.insert(configEntries, {
+			action = "append",
+			key = "workspace.library",
+			dedup = true,
+			value = formattedLibraryDestination,
+		} --[[@as lls-addon.config-entry.append]])
 
 		table.insert(installEntries, {
 			type = "directory",
@@ -246,22 +313,39 @@ local function compileLuarc(rockspec, env)
 	end
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
-	if fs.exists(pluginSource) then
-		local pluginDir = path.deploy_lua_dir(assertContext("tree not set", cfg.root_dir))
+	if fs.is_file(pluginSource) then
+		local luaDir = path.lua_dir(rockspec.package, rockspec.version)
+		local deployLuaDir = path.deploy_lua_dir(assert(cfg.root_dir, "tree not set"))
+
+		local formattedLoaderSource = M.getLoaderSource()
+
 		local pluginDestinationName = rockspec.package .. ".lua"
-		local pluginDestination = dir.path(pluginDir, pluginDestinationName)
-		local formattedPluginDestination = dir.path(pluginDir, pluginDestinationName)
+		local pluginDestination = dir.path(luaDir, pluginDestinationName)
+		local formattedPluginDestination = dir.path(deployLuaDir, pluginDestinationName)
 		if parseFlag(env["ABSPATH"]) then
 			log.info("LLSADDON_ABSPATH is truthy, keeping plugin path absolute.")
 		else
-			log.info("Attempt to make plugin path relative to " .. projectDir)
+			log.info("Attempt to make plugin paths relative to " .. projectDir)
 			formattedPluginDestination = makeDirRelativeTo(formattedPluginDestination, projectDir)
+			formattedLoaderSource = makeDirRelativeTo(formattedLoaderSource, projectDir)
 		end
 
 		-- also set 'runtime.plugin' in .luarc.json
-		luarc = luarc or json.object({})
 		log.info("Adding " .. formattedPluginDestination .. " to 'runtime.plugin' of .luarc.json")
-		luarc["runtime.plugin"] = formattedPluginDestination
+
+		table.insert(configEntries, {
+			action = "prepend",
+			key = "runtime.plugin",
+			dedup = true,
+			value = formattedLoaderSource,
+		} --[[@as lls-addon.config-entry.prepend]])
+
+		table.insert(configEntries, {
+			action = "append",
+			key = "runtime.plugin",
+			dedup = true,
+			value = formattedPluginDestination,
+		} --[[@as lls-addon.config-entry.append]])
 
 		table.insert(installEntries, {
 			type = "bundle",
@@ -273,13 +357,19 @@ local function compileLuarc(rockspec, env)
 	local rockspecSettings = rockspec.build["settings"]
 	local configSource = dir.path(fs.current_dir(), "config.json")
 	if rockspecSettings ~= nil then
-		-- merge rockspec.build.settings into .luarc.json
-		luarc = luarc or json.object({})
-		luarc = copyBuildSettings(rockspecSettings, luarc)
-	elseif fs.exists(configSource) then
-		-- merge 'settings' from 'config.json' into .luarc.json
-		luarc = luarc or json.object({})
-		luarc = copyConfigSettings(configSource, luarc)
+		log.info("Merging 'rockspec.build.settings' into .luarc.json")
+
+		table.insert(configEntries, {
+			action = "merge",
+			value = loadBuildSettings(rockspecSettings),
+		} --[[@as lls-addon.config-entry.merge]])
+	elseif fs.is_file(configSource) then
+		log.info("Merging key 'settings' of config.json object into .luarc.json")
+
+		table.insert(configEntries, {
+			action = "merge",
+			value = loadConfigSettings(configSource),
+		} --[[@as lls-addon.config-entry.merge]])
 
 		table.insert(installEntries, {
 			type = "file",
@@ -288,7 +378,7 @@ local function compileLuarc(rockspec, env)
 		} --[[@as lls-addon.install-entry]])
 	end
 
-	return luarc, installEntries
+	return configEntries, installEntries
 end
 M.compileLuarc = compileLuarc
 
@@ -305,7 +395,7 @@ local function findLuarcFiles(projectDir, env)
 	local luarcPaths = parsePathList(env.LUARCPATH)
 	if luarcPaths then
 		log.info("LLSADDON_LUARCPATH is defined")
-		for _, luarcPath in ipairs(luarcPaths) do
+		for luarcPath in luarcPaths do
 			table.insert(luarcFiles, {
 				type = "luarc",
 				path = luarcPath,
@@ -316,7 +406,7 @@ local function findLuarcFiles(projectDir, env)
 	local vscPaths = parsePathList(env.VSCSETTINGSPATH)
 	if vscPaths then
 		log.info("LLSADDON_VSCSETTINGSPATH is defined")
-		for _, vscPath in ipairs(vscPaths) do
+		for vscPath in vscPaths do
 			table.insert(luarcFiles, {
 				type = "vscode settings",
 				path = vscPath,
@@ -329,13 +419,13 @@ local function findLuarcFiles(projectDir, env)
 	end
 
 	local luarcPath = dir.path(projectDir, ".luarc.json")
-	if fs.exists(luarcPath) then
+	if fs.is_file(luarcPath) then
 		log.info("found .luarc.json in project directory")
 		return { { type = "luarc", path = luarcPath } }
 	end
 
 	local vscPath = dir.path(projectDir, ".vscode", "settings.json")
-	if fs.exists(vscPath) then
+	if fs.is_file(vscPath) then
 		log.info("found .vscode/settings.json in project directory")
 		return { { type = "vscode settings", path = vscPath } }
 	end
@@ -346,35 +436,117 @@ local function findLuarcFiles(projectDir, env)
 end
 M.findLuarcFiles = findLuarcFiles
 
----@param luarcFiles lls-addon.luarc-file[]
----@param luarc { [string]: any }
-local function installLuarcFiles(luarcFiles, luarc)
-	local newSettings
+---@param list unknown[]
+---@param value unknown[]
+---@return integer?
+local function tableFind(list, value)
+	for i, v in ipairs(list) do
+		if v == value then
+			return i
+		end
+	end
 
+	return nil
+end
+
+---@param config { [string]: any }
+---@param configEntries lls-addon.config-entry[]
+---@param luarcType "vscode settings" | "luarc"
+local function applyConfigEntries(config, configEntries, luarcType)
+	local prefix = ""
+	local nested ---@type boolean
+	local transformMerge ---@type fun(config: { [string]: any }): { [string]: any }
+	if luarcType == "vscode settings" then
+		prefix = "Lua."
+		nested = false
+	elseif luarcType == "luarc" then
+		nested = true
+	else
+		-- luacov: disable
+		error("Unreachable: Unknown config file type " .. tostring(luarcType))
+		-- luacov: enable
+	end
+
+	local primary, secondary ---@type lls-addon.path-getter, lls-addon.path-getter
+	if nested then
+		primary, secondary = nestedPath, unnestedPath
+	else
+		primary, secondary = unnestedPath, nestedPath
+	end
+
+	for _, entry in ipairs(configEntries) do
+		local action = entry.action
+		if action == "prepend" or action == "append" then
+			---@cast entry lls-addon.config-entry.prepend
+			local key, value = prefix .. entry.key, entry.value
+			local list ---@type any[]
+			local oldValue1 = primary.get(config, key)
+			local oldValue1_isArray = json.isArray(oldValue1)
+			local oldValue2 = secondary.get(config, key)
+			local oldValue2_isArray = json.isArray(oldValue2)
+			if oldValue1_isArray and oldValue2_isArray then
+				secondary.set(config, key, nil)
+				extend(nested, oldValue1, unnest2(transformMerge(oldValue2)))
+				list = oldValue1
+			elseif oldValue2_isArray then
+				list = oldValue2
+			elseif oldValue1_isArray then
+				list = oldValue1
+			else
+				list = json.array({})
+				primary.set(config, key, list)
+			end
+
+			if not entry.dedup or not tableFind(list, value) then
+				if action == "prepend" then
+					table.insert(list, 1, value)
+				else
+					table.insert(list, value)
+				end
+			end
+		elseif action == "merge" then
+			---@cast entry lls-addon.config-entry.merge
+			local value = unnest2(entry.value)
+			if prefix ~= "" then
+				local prefixedValue = json.object({})
+				for k, v in pairs(value) do
+					prefixedValue[prefix .. k] = v
+				end
+				extend(nested, config, prefixedValue)
+			else
+				extend(nested, config, value)
+			end
+		elseif action == "set" then
+			---@cast entry lls-addon.config-entry.set
+			local key, value = prefix .. entry.key, entry.value
+			local oldValue1 = primary.get(config, key)
+			local oldValue2 = secondary.get(config, key)
+			if oldValue1 ~= nil and oldValue2 ~= nil then
+				secondary.set(config, key, nil)
+				primary.set(config, key, value)
+			elseif oldValue2 ~= nil then
+				secondary.set(config, key, value)
+			else
+				primary.set(config, key, value)
+			end
+		else
+			-- luacov: disable
+			error("Unreachable: unknown action " .. tostring(action))
+			-- luacov: enable
+		end
+	end
+end
+
+---@param luarcFiles lls-addon.luarc-file[]
+---@param configEntries lls-addon.config-entry[]
+local function installLuarcFiles(luarcFiles, configEntries)
 	for _, luarcFile in ipairs(luarcFiles) do
 		local type = luarcFile.type
 		local path = luarcFile.path
 		log.info(string.format("writing to %s: %s", type, path))
-		if type == "vscode settings" then
-			if not newSettings then
-				newSettings = json.object({})
-				for k, v in pairs(luarc) do
-					newSettings["Lua." .. k] = v
-				end
-			end
-
-			local oldSettings = readOrCreateLuarc(path)
-			extend(false, oldSettings, newSettings)
-			json.write(path, oldSettings, { sortKeys = true })
-		elseif type == "luarc" then
-			local oldLuarc = readOrCreateLuarc(path)
-			extend(true, oldLuarc, luarc)
-			json.write(path, oldLuarc, { sortKeys = true })
-		else
-			-- luacov: disable
-			error("Unreachable: unknown luarc path type: " .. type)
-			-- luacov: enable
-		end
+		local oldConfig = readOrCreateLuarc(path)
+		applyConfigEntries(oldConfig, configEntries, type)
+		json.write(path, oldConfig, { sortKeys = true })
 	end
 end
 M.installLuarcFiles = installLuarcFiles
@@ -391,9 +563,9 @@ local function installAddon(rockspec, env, noInstall)
 	log.info("Building addon " .. rockspec.package .. " @ " .. rockspec.version)
 
 	local projectDir = getProjectDir()
-	local luarc, installEntries = compileLuarc(rockspec, env)
+	local configEntries, installEntries = compileLuarc(rockspec, env)
 
-	if not luarc then
+	if #configEntries == 0 then
 		log.warn("addon has no features; no files written!")
 		return
 	end
@@ -404,7 +576,7 @@ local function installAddon(rockspec, env, noInstall)
 		return
 	end
 
-	installLuarcFiles(luarcFiles, luarc)
+	installLuarcFiles(luarcFiles, configEntries)
 
 	-- for copying library, plugin.lua, and config.json
 	installFiles(installEntries)
