@@ -7,6 +7,7 @@ local path = {}
 
 path.rocks_tree_to_string = core_path.rocks_tree_to_string
 path.deploy_lua_dir = core_path.deploy_lua_dir
+path.rocks_dir = core_path.rocks_dir
 
 ---Get the local installation directory (prefix) for a package.
 ---@param name string -- the package name
