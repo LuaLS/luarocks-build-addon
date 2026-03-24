@@ -3,7 +3,6 @@ local dir = require("luarocks.dir")
 local fs = require("luarocks.fs") --[[@as luarocks.fs]]
 local path = require("luarocks.path") --[[@as luarocks.path]]
 
-local bundle = require("luarocks.build.lls-addon.bundle")
 local json = require("luarocks.build.lls-addon.json-util")
 local log = require("luarocks.build.lls-addon.log")
 local tableUtil = require("luarocks.build.lls-addon.table-util")
@@ -253,7 +252,7 @@ end
 ---| lls-addon.config-entry.merge
 
 ---@class lls-addon.install-entry
----@field type "file" | "directory" | "bundle"
+---@field type "file" | "directory"
 ---@field source string
 ---@field destination string
 
@@ -268,9 +267,6 @@ local function installFiles(installEntries)
 			copyFile(source, destination)
 		elseif type == "directory" then
 			copyDirectory(source, destination)
-		elseif type == "bundle" then
-			-- assuming 'source' is just a filename
-			bundle(source, destination)
 		else
 			-- luacov: disable
 			error("Unreachable: unknown install entry type: " .. type)
@@ -314,19 +310,14 @@ local function compileLuarc(rockspec, env)
 
 	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
 	if fs.is_file(pluginSource) then
-		local luaDir = path.lua_dir(rockspec.package, rockspec.version)
-		local deployLuaDir = path.deploy_lua_dir(assert(cfg.root_dir, "tree not set"))
-
 		local formattedLoaderSource = M.getLoaderSource()
 
-		local pluginDestinationName = rockspec.package .. ".lua"
-		local pluginDestination = dir.path(luaDir, pluginDestinationName)
-		local formattedPluginDestination = dir.path(deployLuaDir, pluginDestinationName)
+		local pluginDestination = dir.path(installDir, "plugin.lua")
+		local formattedPluginDestination = dir.path(formattedInstallDir, "plugin.lua")
 		if parseFlag(env["ABSPATH"]) then
 			log.info("LLSADDON_ABSPATH is truthy, keeping plugin path absolute.")
 		else
 			log.info("Attempt to make plugin paths relative to " .. projectDir)
-			formattedPluginDestination = makeDirRelativeTo(formattedPluginDestination, projectDir)
 			formattedLoaderSource = makeDirRelativeTo(formattedLoaderSource, projectDir)
 		end
 
@@ -348,10 +339,20 @@ local function compileLuarc(rockspec, env)
 		} --[[@as lls-addon.config-entry.append]])
 
 		table.insert(installEntries, {
-			type = "bundle",
-			source = "plugin",
+			type = "file",
+			source = pluginSource,
 			destination = pluginDestination,
 		} --[[@as lls-addon.install-entry]])
+
+		local pluginFolderSource = dir.path(fs.current_dir(), "plugin")
+		if fs.is_dir(pluginFolderSource) then
+			local pluginFolderDestination = dir.path(installDir, "plugin")
+			table.insert(installEntries, {
+				type = "directory",
+				source = pluginFolderSource,
+				destination = pluginFolderDestination,
+			} --[[@as lls-addon.install-entry]])
+		end
 	end
 
 	local rockspecSettings = rockspec.build["settings"]

@@ -256,13 +256,13 @@ describe("luarocks-build-lls-addon", function()
 
 	it("works when there is a plugin included", function()
 		setupProject("with-plugin")
-		assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
+		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			runtime = {
 				plugin = {
 					FAKE_LOADER_SOURCE,
-					path(LUA_DIR, "types.lua"),
+					path(INSTALL_DIR, "plugin.lua"),
 				},
 			},
 		}, luarc)
@@ -282,14 +282,14 @@ describe("luarocks-build-lls-addon", function()
 	it("works when there is a library and plugin included", function()
 		setupProject("with-lib-plugin")
 		assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
-		assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
+		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			workspace = { library = { path(INSTALL_DIR, "library") } },
 			runtime = {
 				plugin = {
 					FAKE_LOADER_SOURCE,
-					path(LUA_DIR, "types.lua"),
+					path(INSTALL_DIR, "plugin.lua"),
 				},
 			},
 		}, luarc)
@@ -298,14 +298,30 @@ describe("luarocks-build-lls-addon", function()
 	it("works when there is a config and plugin included", function()
 		setupProject("with-config-plugin")
 		assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
-		assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
+		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			example = true,
 			runtime = {
 				plugin = {
 					FAKE_LOADER_SOURCE,
-					path(LUA_DIR, "types.lua"),
+					path(INSTALL_DIR, "plugin.lua"),
+				},
+			},
+		}, luarc)
+	end)
+
+	it("works when there is a multi-file plugin included", function()
+		setupProject("with-multi-file-plugin")
+		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
+		assert.are_equal("directory", mode(path(INSTALL_DIR, "plugin")))
+		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin", "submodule.lua")))
+		local luarc = json.read(".luarc.json")
+		assert.are_same({
+			runtime = {
+				plugin = {
+					FAKE_LOADER_SOURCE,
+					path(INSTALL_DIR, "plugin.lua"),
 				},
 			},
 		}, luarc)
@@ -315,7 +331,7 @@ describe("luarocks-build-lls-addon", function()
 		setupProject("with-lib-config-plugin")
 		assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
 		assert.are_equal("file", mode(path(INSTALL_DIR, "config.json")))
-		assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
+		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			workspace = { library = { path(INSTALL_DIR, "library") } },
@@ -323,7 +339,7 @@ describe("luarocks-build-lls-addon", function()
 			runtime = {
 				plugin = {
 					FAKE_LOADER_SOURCE,
-					path(LUA_DIR, "types.lua"),
+					path(INSTALL_DIR, "plugin.lua"),
 				},
 			},
 		}, luarc)
@@ -394,7 +410,7 @@ describe("luarocks-build-lls-addon", function()
 		local cd = lfs.currentdir()
 		assert.are_equal("directory", mode(path(INSTALL_DIR, "library")))
 		assert.is_nil(mode(path(INSTALL_DIR, "config.json")))
-		assert.are_equal("file", mode(path(LUA_DIR, "types.lua")))
+		assert.are_equal("file", mode(path(INSTALL_DIR, "plugin.lua")))
 		local luarc = json.read(".luarc.json")
 		assert.are_same({
 			hover = { enable = true },
@@ -402,7 +418,7 @@ describe("luarocks-build-lls-addon", function()
 			runtime = {
 				plugin = {
 					FAKE_LOADER_SOURCE,
-					path(cd, LUA_DIR, "types.lua"),
+					path(cd, INSTALL_DIR, "plugin.lua"),
 				},
 			},
 		}, luarc)

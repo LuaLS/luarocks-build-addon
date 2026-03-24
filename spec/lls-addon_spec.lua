@@ -79,8 +79,14 @@ describe("lls-addon", function()
 	local CURRENT_DIR = path("fake", "path", "to", "types") --[[@as "fake/path/to/types"]]
 	local ROCKS_DIR = path("fake", "path", "to", "rocks") --[[@as "fake/path/to/rocks"]]
 
-	local INSTALL_DIR = path("lua_modules", "lib", "luarocks", "rocks-5.4", PACKAGE, VERSION) --[[@as "lua_modules/lib/luarocks/rocks-5.4/test/0.1-1"]]
-	local LUA_DIR = path("lua_modules", "share", "lua", "5.4") --[[@as "lua_modules/share/lua/5.5"]]
+	---@param package string
+	---@param version string
+	---@return string
+	local function installDir(package, version)
+		return path("lua_modules", "lib", "luarocks", "rocks-5.4", package, version)
+	end
+	local INSTALL_DIR = installDir(PACKAGE, VERSION) --[[@as "lua_modules/lib/luarocks/rocks-5.4/test/0.1-1"]]
+	local LUA_DIR = path("lua_modules", "share", "lua", "5.4") --[[@as "lua_modules/share/lua/5.4"]]
 
 	local LOADER_SOURCE = path("fake", "path", "to", "lls-addon-loader.lua")
 	stub(llsAddon, "getLoaderSource", LOADER_SOURCE)
@@ -162,24 +168,52 @@ describe("lls-addon", function()
 					action = "append",
 					dedup = true,
 					key = "runtime.plugin",
-					value = path(ROCKS_DIR, LUA_DIR, "lls-addon-types.lua"),
+					value = path(ROCKS_DIR, installDir("lls-addon-types", VERSION), "plugin.lua"),
 				} --[[@as lls-addon.config-entry.append]],
 			}, configEntries)
 			assert.are_same({
 				{
-					type = "bundle",
-					source = "plugin",
-					destination = path(
-						ROCKS_DIR,
-						"lua_modules",
-						"lib",
-						"luarocks",
-						"rocks-5.4",
-						"lls-addon-types",
-						VERSION,
-						"lua",
-						"lls-addon-types.lua"
-					),
+					type = "file",
+					source = path(CURRENT_DIR, "plugin.lua"),
+					destination = path(ROCKS_DIR, installDir("lls-addon-types", VERSION), "plugin.lua"),
+				} --[[@as lls-addon.install-entry]],
+			}, installEntries)
+		end)
+
+		it("works when given a multi-file plugin", function()
+			stubFs({
+				-- key = handler / return value
+				current_dir = CURRENT_DIR,
+				is_file = pathEquals(path(CURRENT_DIR, "plugin.lua")),
+				is_dir = pathEquals(path(CURRENT_DIR, "plugin")),
+			})
+
+			local rockspec = makeRockspec({ package = "lls-addon-types" })
+			local configEntries, installEntries = compileLuarc(rockspec, {})
+			assert.are_same({
+				{
+					action = "prepend",
+					dedup = true,
+					key = "runtime.plugin",
+					value = LOADER_SOURCE,
+				} --[[@as lls-addon.config-entry.prepend]],
+				{
+					action = "append",
+					dedup = true,
+					key = "runtime.plugin",
+					value = path(ROCKS_DIR, installDir("lls-addon-types", VERSION), "plugin.lua"),
+				} --[[@as lls-addon.config-entry.append]],
+			}, configEntries)
+			assert.are_same({
+				{
+					type = "file",
+					source = path(CURRENT_DIR, "plugin.lua"),
+					destination = path(ROCKS_DIR, installDir("lls-addon-types", VERSION), "plugin.lua"),
+				} --[[@as lls-addon.install-entry]],
+				{
+					type = "directory",
+					source = path(CURRENT_DIR, "plugin"),
+					destination = path(ROCKS_DIR, installDir("lls-addon-types", VERSION), "plugin"),
 				} --[[@as lls-addon.install-entry]],
 			}, installEntries)
 		end)
@@ -359,7 +393,7 @@ describe("lls-addon", function()
 					action = "append",
 					dedup = true,
 					key = "runtime.plugin",
-					value = path(ROCKS_DIR, LUA_DIR, PACKAGE .. ".lua"),
+					value = path(ROCKS_DIR, INSTALL_DIR, "plugin.lua"),
 				},
 				{
 					action = "merge",
@@ -376,9 +410,9 @@ describe("lls-addon", function()
 				destination = path(ROCKS_DIR, INSTALL_DIR, "library"),
 			}, installEntries)
 			assert.contains({
-				type = "bundle",
-				source = "plugin",
-				destination = path(ROCKS_DIR, INSTALL_DIR, "lua", PACKAGE .. ".lua"),
+				type = "file",
+				source = path(CURRENT_DIR, "plugin.lua"),
+				destination = path(ROCKS_DIR, INSTALL_DIR, "plugin.lua"),
 			}, installEntries)
 		end)
 	end)
