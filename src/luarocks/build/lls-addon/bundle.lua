@@ -77,7 +77,6 @@ local function addDirectory(strings, modulePath, dirName)
 		elseif fs.is_dir(entry) then
 			addDirectory(strings, modulePath, entry)
 		end
-		::continue::
 	end
 	table.remove(modulePath)
 	fs.pop_dir()
