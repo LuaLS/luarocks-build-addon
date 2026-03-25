@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `plugin/` installs to the same directory as `library/` and `plugin.lua`
-- Plugins can access LuaRocks dependencies using `lls-addon-loader.lua`, which is automatically added to the `.luarc.json`
+- Plugins can access LuaRocks dependencies. It prepends a plugin file called `lls-addon-loader.lua` that sets up the required paths.
 - Installing a new version of a pre-existing addon removes old versions from the `.luarc.json`
 
 ## [v0.1.1-1]
