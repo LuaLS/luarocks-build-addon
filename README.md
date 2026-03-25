@@ -4,13 +4,13 @@ A build backend for installing [lua-language-server](https://github.com/LuaLS/lu
 
 Its effects are as follows:
 
-- Compile a "patch" that describes what settings will be added to LuaLS config files.
-    - paths can be customized
+- Compile a list of operations that describes what settings will be added to LuaLS config files.
+    - LuaLS config file paths can be customized
 - Look for LuaLS config files in the project directory by default, prioritizing `./.luarc.json`, then looking for a `./.vscode/settings.json`, and defaulting to creating a new `.luarc.json` otherwise.
     - can be customized
 - If the `--no-install` option is given, processing stops here.
 - Apply the "patch" into every discovered file. File entries may be overwritten
-- Install any other assets (`library/` and `plugin.lua`)
+- Install any other assets (`library/`, `plugin.lua`, and `plugin/`)
 
 ## Usage for End-Users
 
