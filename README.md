@@ -41,7 +41,7 @@ Addon developers should use an addon file structure like this:
 
 ```sh
 .
-├── .luarocks    # required
+├── .luarocks/   # required
 │   └── default-lua-version.lua  # set to 'return "5.5"'
 ├── library/     # optional
 │   ├── definition-files.lua
