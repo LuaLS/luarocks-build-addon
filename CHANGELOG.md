@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.2.0-1]
+
 ### Added
 
 - `plugin/` installs to the same directory as `library/` and `plugin.lua`
