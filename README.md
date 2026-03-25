@@ -19,7 +19,7 @@ Its effects are as follows:
 
 End-users can manage addon installations using the LuaRocks CLI.
 
-- `luarocks install an-addon` - install `an-addon`
+- `luarocks install an-addon` - install or update `an-addon`
 - `luarocks remove an-addon` - remove `an-addon`
 - `luarocks show an-addon` - view information about `an-addon`
 - etc.
