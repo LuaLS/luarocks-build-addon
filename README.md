@@ -41,14 +41,16 @@ Addon developers should use an addon file structure like this:
 
 ```sh
 .
-├── [addon name]-[version]-[revision].rockspec  # required
+├── .luarocks    # required
+│   └── default-lua-version.lua  # set to 'return "5.5"'
 ├── library/     # optional
-│   ├── more-files.lua
+│   ├── definition-files.lua
+│   └── ...
+├── plugin/      # optional
+│   ├── runtime-files.lua
 │   └── ...
 ├── plugin.lua   # optional
-└── plugin/     # optional
-    ├── more-files.lua
-    └── ...
+└── [addon name]-[version]-[revision].rockspec  # required
 ```
 
 See the [Creating an Addon](https://luals.github.io/wiki/addons/#creating-an-addon) section for more information on the individual components.
