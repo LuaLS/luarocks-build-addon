@@ -58,16 +58,16 @@ do
 		paths = paths or package.path
 
 		local root_dir = assert(cfg.root_dir, "root_dir not set")
-		assert(fs.change_dir(path.rocks_tree_to_string(root_dir)))
+		assertContext("while changing directories in searchPaths", fs.change_dir(path.rocks_tree_to_string(root_dir)))
 		for p in string.gmatch(paths, PATH_SEP_PATTERN) do
 			local filePath = getSearchPath(modulename, p)
 			if fs.exists(filePath) then
-				assert(fs.pop_dir())
+				assert(fs.pop_dir(), "failed to pop directory in searchPaths success")
 				return filePath
 			end
 		end
 
-		assert(fs.pop_dir())
+		assert(fs.pop_dir(), "failed to pop directory in searchPaths failure")
 		return nil, "unable to find file"
 	end
 
