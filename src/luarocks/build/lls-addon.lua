@@ -202,27 +202,6 @@ local function loadBuildSettings(settings)
 	return settings
 end
 
----@param source string
----@param destination string
-local function copyFile(source, destination)
-	log.info("Installing " .. source .. " to " .. destination)
-
-	local dirName = dir.dir_name(destination)
-	if dirName ~= "" then
-		assertContext("when creating intermediate folders for " .. destination, fs.make_dir(dirName))
-	end
-	assertContext("when copying into " .. destination, fs.copy(source, destination))
-end
-
----@param source string
----@param destination string
-local function copyDirectory(source, destination)
-	log.info("Installing " .. source .. " to " .. destination)
-
-	assertContext("when creating intermediate folders for " .. destination, fs.make_dir(destination))
-	assertContext("when copying files into " .. destination, fs.copy_contents(source, destination))
-end
-
 ---@class lls-addon.config-entry.append
 ---@field action "append"
 ---@field key string
@@ -260,21 +239,45 @@ end
 ---@field source string
 ---@field destination string
 
----copies any files and directories listed in `installEntries`
----@param installEntries lls-addon.install-entry[]
-local function installFiles(installEntries)
-	for _, entry in ipairs(installEntries) do
-		local type = entry.type
-		local source = entry.source
-		local destination = entry.destination
-		if type == "file" then
-			copyFile(source, destination)
-		elseif type == "directory" then
-			copyDirectory(source, destination)
-		else
-			-- luacov: disable
-			error("Unreachable: unknown install entry type: " .. type)
-			-- luacov: enable
+local installFiles
+do
+	---@param source string
+	---@param destination string
+	local function copyFile(source, destination)
+		log.info("Installing " .. source .. " to " .. destination)
+
+		local dirName = dir.dir_name(destination)
+		if dirName ~= "" then
+			assertContext("when creating intermediate folders for " .. destination, fs.make_dir(dirName))
+		end
+		assertContext("when copying into " .. destination, fs.copy(source, destination))
+	end
+
+	---@param source string
+	---@param destination string
+	local function copyDirectory(source, destination)
+		log.info("Installing " .. source .. " to " .. destination)
+
+		assertContext("when creating intermediate folders for " .. destination, fs.make_dir(destination))
+		assertContext("when copying files into " .. destination, fs.copy_contents(source, destination))
+	end
+
+	---copies any files and directories listed in `installEntries`
+	---@param installEntries lls-addon.install-entry[]
+	function installFiles(installEntries)
+		for _, entry in ipairs(installEntries) do
+			local type = entry.type
+			local source = entry.source
+			local destination = entry.destination
+			if type == "file" then
+				copyFile(source, destination)
+			elseif type == "directory" then
+				copyDirectory(source, destination)
+			else
+				-- luacov: disable
+				error("Unreachable: unknown install entry type: " .. type)
+				-- luacov: enable
+			end
 		end
 	end
 end
