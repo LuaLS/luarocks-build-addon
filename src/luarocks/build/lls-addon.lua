@@ -120,11 +120,14 @@ local function readOrCreateLuarc(sourcePath)
 	return luarc
 end
 
+---@param quiet? boolean
 ---@return string
-local function getProjectDir()
+local function getProjectDir(quiet)
 	local projectDir = cfg.project_dir --[[@as string]]
 	if not projectDir then
-		log.info("Project directory not found, defaulting to working directory")
+		if not quiet then
+			log.info("Project directory not found, defaulting to working directory")
+		end
 		projectDir = fs.current_dir()
 	end
 	return projectDir
@@ -594,7 +597,7 @@ do
 	function installLuarcFiles(rockspec, luarcFiles, configEntries)
 		local pointsToWrongVersion
 		do
-			local projectDir = getProjectDir()
+			local projectDir = getProjectDir(--[[quiet:]] true)
 			local packageDir = dir.path(path.rocks_dir(), rockspec.package)
 			local packageDirLen = string.len(packageDir)
 			local currentVersionDir = dir.path(packageDir, rockspec.version)
