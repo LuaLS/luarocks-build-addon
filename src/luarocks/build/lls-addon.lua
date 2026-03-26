@@ -103,23 +103,6 @@ local function parsePathList(pathsString)
 	return string.gmatch(pathsString, PATH_SEP_PATTERN)
 end
 
----reads .luarc.json into a table, or returns a new one if it doesn't exist
----@param sourcePath string
----@return { [string]: any } luarc
-local function readOrCreateLuarc(sourcePath)
-	if not fs.exists(sourcePath) then
-		log.info(sourcePath .. " not found, generating a new one")
-		return json.object({})
-	end
-
-	log.info("Found " .. sourcePath)
-	local luarc = json.read(sourcePath) --[[@as { [string]: any }]]
-	if not json.isObject(luarc) then
-		error("[BuildError]: Expected root of " .. sourcePath .. " to be an object.")
-	end
-	return luarc
-end
-
 ---@param quiet? boolean
 ---@return string
 local function getProjectDir(quiet)
@@ -589,6 +572,23 @@ do
 				-- luacov: enable
 			end
 		end
+	end
+
+	---reads .luarc.json into a table, or returns a new one if it doesn't exist
+	---@param sourcePath string
+	---@return { [string]: any } luarc
+	local function readOrCreateLuarc(sourcePath)
+		if not fs.exists(sourcePath) then
+			log.info(sourcePath .. " not found, generating a new one")
+			return json.object({})
+		end
+
+		log.info("Found " .. sourcePath)
+		local luarc = json.read(sourcePath) --[[@as { [string]: any }]]
+		if not json.isObject(luarc) then
+			error("[BuildError]: Expected root of " .. sourcePath .. " to be an object.")
+		end
+		return luarc
 	end
 
 	---@param rockspec luarocks.Rockspec
