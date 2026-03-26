@@ -77,7 +77,6 @@ do
 		if not loaderSource then
 			loaderSource =
 				assertContext("while finding 'luarocks.lls-addon-loader'", searchPaths("luarocks.lls-addon-loader")) --[[@as string]]
-			M.LOADER_SOURCE = loaderSource
 		end
 
 		return loaderSource
