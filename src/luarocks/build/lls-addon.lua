@@ -623,8 +623,8 @@ do
 end
 
 ---does two things:
----- copies the library/, config.json and plugin.lua into the rock's install
----  directory
+---- copies the library/, config.json, plugin/ and plugin.lua into the rock's
+---  install directory
 ---- modifies or creates a project-scoped `.luarc.json`, which will contain
 ---  references to the above copied files
 ---@param rockspec luarocks.Rockspec
@@ -647,7 +647,6 @@ local function installAddon(rockspec, env, noInstall)
 		return
 	end
 
-	-- for copying library, plugin.lua, and config.json
 	installFiles(installEntries)
 
 	installLuarcFiles(rockspec, luarcFiles, configEntries)
