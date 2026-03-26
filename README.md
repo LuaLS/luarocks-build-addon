@@ -19,9 +19,9 @@ Its effects are as follows:
 
 End-users can manage addon installations using the LuaRocks CLI.
 
-- `luarocks install an-addon` - install or update `an-addon`
-- `luarocks remove an-addon` - remove `an-addon`
-- `luarocks show an-addon` - view information about `an-addon`
+- `luarocks --lua-version 5.5 install an-addon` - install or update `an-addon`
+- `luarocks --lua-version 5.5 remove an-addon` - remove `an-addon`
+- `luarocks --lua-version 5.5 show an-addon` - view information about `an-addon`
 - etc.
 
 Users can also browse addons online from https://luarocks.org/m/lls-addons.
