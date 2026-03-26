@@ -372,7 +372,7 @@ do
 				value = loadBuildSettings(rockspecSettings),
 			} --[[@as lls-addon.config-entry.merge]])
 		elseif fs.is_file(configSource) then
-			log.info("Merging key 'settings' of config.json object into .luarc.json")
+			log.info("Merging key 'settings' of config.json into .luarc.json")
 
 			table.insert(configEntries, {
 				action = "merge",
