@@ -164,76 +164,6 @@ local function getInstallDir(projectDir, rockspec, env)
 end
 M.getInstallDir = getInstallDir
 
----@param sourcePath string
----@return { [string]: any } configSettings
-local function loadConfigSettings(sourcePath)
-	local config = json.read(sourcePath)
-
-	if not json.isObject(config) then
-		error("[BuildError]: root of " .. sourcePath .. " is not an object. Submit an issue to the addon developer.")
-	end
-	---@cast config { [string]: any }
-
-	local settings = config.settings
-	if not json.isObject(settings) then
-		error(
-			"[BuildError]: key 'settings' of "
-				.. sourcePath
-				.. " is not an object. Submit an issue to the addon developer."
-		)
-	end
-
-	local settingsNoPrefix = json.object({})
-	for k, v in pairs(settings) do
-		settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
-	end
-
-	return settingsNoPrefix
-end
-
----@param settings { [string]: any }
----@return { [string]: any } settings
-local function loadBuildSettings(settings)
-	settings = json.coerce(settings)
-	if not json.isObject(settings) then
-		error("[BuildError]: 'rockspec.build.settings' is not an object. Submit an issue to the addon developer.")
-	end
-
-	return settings
-end
-
----@class lls-addon.config-entry.append
----@field action "append"
----@field key string
----@field dedup boolean
----@field value unknown
-
----@class lls-addon.config-entry.prepend
----@field action "prepend"
----@field key string
----@field dedup boolean
----@field value unknown
-
----@class lls-addon.config-entry.set
----@field action "set"
----@field key string
----@field value unknown
-
----@class lls-addon.config-entry.merge
----@field action "merge"
----@field value { [string]: unknown }
-
----@class lls-addon.config-entry.remove-deleted-versions
----@field action "remove-deleted-versions"
----@field key string
-
----@alias lls-addon.config-entry
----| lls-addon.config-entry.append
----| lls-addon.config-entry.prepend
----| lls-addon.config-entry.set
----| lls-addon.config-entry.merge
----| lls-addon.config-entry.remove-deleted-versions
-
 ---@class lls-addon.install-entry
 ---@field type "file" | "directory"
 ---@field source string
@@ -282,123 +212,198 @@ do
 	end
 end
 
----creates a "diffed" .luarc.json configuration that represents all the changes
----to apply to the user's configuration files
----@param rockspec luarocks.Rockspec
----@param env { [string]: string? }
----@return lls-addon.config-entry[] configEntries
----@return lls-addon.install-entry[] installEntries
-local function compileLuarc(rockspec, env)
-	local projectDir = getProjectDir()
-	local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
+---@class lls-addon.config-entry.append
+---@field action "append"
+---@field key string
+---@field dedup boolean
+---@field value unknown
 
-	local configEntries = {} ---@type lls-addon.config-entry[]
-	local installEntries = {} ---@type lls-addon.install-entry[]
+---@class lls-addon.config-entry.prepend
+---@field action "prepend"
+---@field key string
+---@field dedup boolean
+---@field value unknown
 
-	local librarySource = dir.path(fs.current_dir(), "library")
-	if fs.is_dir(librarySource) then
-		local libraryDestination = dir.path(installDir, "library")
-		local formattedLibraryDestination = dir.path(formattedInstallDir, "library")
+---@class lls-addon.config-entry.set
+---@field action "set"
+---@field key string
+---@field value unknown
 
-		log.info("Adding " .. formattedLibraryDestination .. " to 'workspace.library' of .luarc.json")
-		table.insert(configEntries, {
-			action = "append",
-			key = "workspace.library",
-			dedup = true,
-			value = formattedLibraryDestination,
-		} --[[@as lls-addon.config-entry.append]])
+---@class lls-addon.config-entry.merge
+---@field action "merge"
+---@field value { [string]: unknown }
 
-		table.insert(configEntries, {
-			action = "remove-deleted-versions",
-			key = "workspace.library",
-		} --[[@as lls-addon.config-entry.remove-deleted-versions]])
+---@class lls-addon.config-entry.remove-deleted-versions
+---@field action "remove-deleted-versions"
+---@field key string
 
-		table.insert(installEntries, {
-			type = "directory",
-			source = librarySource,
-			destination = libraryDestination,
-		} --[[@as lls-addon.install-entry]])
-	end
+---@alias lls-addon.config-entry
+---| lls-addon.config-entry.append
+---| lls-addon.config-entry.prepend
+---| lls-addon.config-entry.set
+---| lls-addon.config-entry.merge
+---| lls-addon.config-entry.remove-deleted-versions
 
-	local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
-	if fs.is_file(pluginSource) then
-		local formattedLoaderSource = M.getLoaderSource()
+local compileLuarc
+do
+	---@param sourcePath string
+	---@return { [string]: any } configSettings
+	local function loadConfigSettings(sourcePath)
+		local config = json.read(sourcePath)
 
-		local pluginDestination = dir.path(installDir, "plugin.lua")
-		local formattedPluginDestination = dir.path(formattedInstallDir, "plugin.lua")
-		if parseFlag(env["ABSPATH"]) then
-			log.info("LLSADDON_ABSPATH is truthy, keeping plugin path absolute.")
-		else
-			log.info("Attempt to make plugin paths relative to " .. projectDir)
-			formattedLoaderSource = makeDirRelativeTo(formattedLoaderSource, projectDir)
+		if not json.isObject(config) then
+			error(
+				"[BuildError]: root of " .. sourcePath .. " is not an object. Submit an issue to the addon developer."
+			)
+		end
+		---@cast config { [string]: any }
+
+		local settings = config.settings
+		if not json.isObject(settings) then
+			error(
+				"[BuildError]: key 'settings' of "
+					.. sourcePath
+					.. " is not an object. Submit an issue to the addon developer."
+			)
 		end
 
-		-- also set 'runtime.plugin' in .luarc.json
-		log.info("Adding " .. formattedPluginDestination .. " to 'runtime.plugin' of .luarc.json")
+		local settingsNoPrefix = json.object({})
+		for k, v in pairs(settings) do
+			settingsNoPrefix[k:match("^Lua%.(.*)$") or k] = v
+		end
 
-		table.insert(configEntries, {
-			action = "prepend",
-			key = "runtime.plugin",
-			dedup = true,
-			value = formattedLoaderSource,
-		} --[[@as lls-addon.config-entry.prepend]])
+		return settingsNoPrefix
+	end
 
-		table.insert(configEntries, {
-			action = "append",
-			key = "runtime.plugin",
-			dedup = true,
-			value = formattedPluginDestination,
-		} --[[@as lls-addon.config-entry.append]])
+	---@param settings { [string]: any }
+	---@return { [string]: any } settings
+	local function loadBuildSettings(settings)
+		settings = json.coerce(settings)
+		if not json.isObject(settings) then
+			error("[BuildError]: 'rockspec.build.settings' is not an object. Submit an issue to the addon developer.")
+		end
 
-		table.insert(configEntries, {
-			action = "remove-deleted-versions",
-			key = "runtime.plugin",
-		} --[[@as lls-addon.config-entry.remove-deleted-versions]])
+		return settings
+	end
 
-		table.insert(installEntries, {
-			type = "file",
-			source = pluginSource,
-			destination = pluginDestination,
-		} --[[@as lls-addon.install-entry]])
+	---creates a "diffed" .luarc.json configuration that represents all the changes
+	---to apply to the user's configuration files
+	---@param rockspec luarocks.Rockspec
+	---@param env { [string]: string? }
+	---@return lls-addon.config-entry[] configEntries
+	---@return lls-addon.install-entry[] installEntries
+	function compileLuarc(rockspec, env)
+		local projectDir = getProjectDir()
+		local installDir, formattedInstallDir = getInstallDir(projectDir, rockspec, env)
 
-		local pluginFolderSource = dir.path(fs.current_dir(), "plugin")
-		if fs.is_dir(pluginFolderSource) then
-			local pluginFolderDestination = dir.path(installDir, "plugin")
+		local configEntries = {} ---@type lls-addon.config-entry[]
+		local installEntries = {} ---@type lls-addon.install-entry[]
+
+		local librarySource = dir.path(fs.current_dir(), "library")
+		if fs.is_dir(librarySource) then
+			local libraryDestination = dir.path(installDir, "library")
+			local formattedLibraryDestination = dir.path(formattedInstallDir, "library")
+
+			log.info("Adding " .. formattedLibraryDestination .. " to 'workspace.library' of .luarc.json")
+			table.insert(configEntries, {
+				action = "append",
+				key = "workspace.library",
+				dedup = true,
+				value = formattedLibraryDestination,
+			} --[[@as lls-addon.config-entry.append]])
+
+			table.insert(configEntries, {
+				action = "remove-deleted-versions",
+				key = "workspace.library",
+			} --[[@as lls-addon.config-entry.remove-deleted-versions]])
+
 			table.insert(installEntries, {
 				type = "directory",
-				source = pluginFolderSource,
-				destination = pluginFolderDestination,
+				source = librarySource,
+				destination = libraryDestination,
 			} --[[@as lls-addon.install-entry]])
 		end
+
+		local pluginSource = dir.path(fs.current_dir(), "plugin.lua")
+		if fs.is_file(pluginSource) then
+			local formattedLoaderSource = M.getLoaderSource()
+
+			local pluginDestination = dir.path(installDir, "plugin.lua")
+			local formattedPluginDestination = dir.path(formattedInstallDir, "plugin.lua")
+			if parseFlag(env["ABSPATH"]) then
+				log.info("LLSADDON_ABSPATH is truthy, keeping plugin path absolute.")
+			else
+				log.info("Attempt to make plugin paths relative to " .. projectDir)
+				formattedLoaderSource = makeDirRelativeTo(formattedLoaderSource, projectDir)
+			end
+
+			-- also set 'runtime.plugin' in .luarc.json
+			log.info("Adding " .. formattedPluginDestination .. " to 'runtime.plugin' of .luarc.json")
+
+			table.insert(configEntries, {
+				action = "prepend",
+				key = "runtime.plugin",
+				dedup = true,
+				value = formattedLoaderSource,
+			} --[[@as lls-addon.config-entry.prepend]])
+
+			table.insert(configEntries, {
+				action = "append",
+				key = "runtime.plugin",
+				dedup = true,
+				value = formattedPluginDestination,
+			} --[[@as lls-addon.config-entry.append]])
+
+			table.insert(configEntries, {
+				action = "remove-deleted-versions",
+				key = "runtime.plugin",
+			} --[[@as lls-addon.config-entry.remove-deleted-versions]])
+
+			table.insert(installEntries, {
+				type = "file",
+				source = pluginSource,
+				destination = pluginDestination,
+			} --[[@as lls-addon.install-entry]])
+
+			local pluginFolderSource = dir.path(fs.current_dir(), "plugin")
+			if fs.is_dir(pluginFolderSource) then
+				local pluginFolderDestination = dir.path(installDir, "plugin")
+				table.insert(installEntries, {
+					type = "directory",
+					source = pluginFolderSource,
+					destination = pluginFolderDestination,
+				} --[[@as lls-addon.install-entry]])
+			end
+		end
+
+		local rockspecSettings = rockspec.build["settings"]
+		local configSource = dir.path(fs.current_dir(), "config.json")
+		if rockspecSettings ~= nil then
+			log.info("Merging 'rockspec.build.settings' into .luarc.json")
+
+			table.insert(configEntries, {
+				action = "merge",
+				value = loadBuildSettings(rockspecSettings),
+			} --[[@as lls-addon.config-entry.merge]])
+		elseif fs.is_file(configSource) then
+			log.info("Merging key 'settings' of config.json object into .luarc.json")
+
+			table.insert(configEntries, {
+				action = "merge",
+				value = loadConfigSettings(configSource),
+			} --[[@as lls-addon.config-entry.merge]])
+
+			table.insert(installEntries, {
+				type = "file",
+				source = configSource,
+				destination = dir.path(installDir, "config.json"),
+			} --[[@as lls-addon.install-entry]])
+		end
+
+		return configEntries, installEntries
 	end
-
-	local rockspecSettings = rockspec.build["settings"]
-	local configSource = dir.path(fs.current_dir(), "config.json")
-	if rockspecSettings ~= nil then
-		log.info("Merging 'rockspec.build.settings' into .luarc.json")
-
-		table.insert(configEntries, {
-			action = "merge",
-			value = loadBuildSettings(rockspecSettings),
-		} --[[@as lls-addon.config-entry.merge]])
-	elseif fs.is_file(configSource) then
-		log.info("Merging key 'settings' of config.json object into .luarc.json")
-
-		table.insert(configEntries, {
-			action = "merge",
-			value = loadConfigSettings(configSource),
-		} --[[@as lls-addon.config-entry.merge]])
-
-		table.insert(installEntries, {
-			type = "file",
-			source = configSource,
-			destination = dir.path(installDir, "config.json"),
-		} --[[@as lls-addon.install-entry]])
-	end
-
-	return configEntries, installEntries
+	M.compileLuarc = compileLuarc
 end
-M.compileLuarc = compileLuarc
 
 ---@class lls-addon.luarc-file
 ---@field type "luarc" | "vscode settings"
