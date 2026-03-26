@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `require("luarocks.build.lls-addon").LOADER_SOURCE` is no longer set when calling `getLoaderSource`.
+
 ## [v0.2.0-1]
 
 ### Added
