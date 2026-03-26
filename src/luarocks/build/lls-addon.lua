@@ -106,7 +106,7 @@ end
 ---@param quiet? boolean
 ---@return string
 local function getProjectDir(quiet)
-	local projectDir = cfg.project_dir --[[@as string]]
+	local projectDir = cfg.project_dir
 	if not projectDir then
 		if not quiet then
 			log.info("Project directory not found, defaulting to working directory")
