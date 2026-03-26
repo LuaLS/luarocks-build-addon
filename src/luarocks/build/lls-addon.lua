@@ -459,166 +459,165 @@ local function findLuarcFiles(projectDir, env)
 end
 M.findLuarcFiles = findLuarcFiles
 
----@param list unknown[]
----@param value unknown[]
----@return integer?
-local function tableFind(list, value)
-	for i, v in ipairs(list) do
-		if v == value then
-			return i
+local installLuarcFiles
+do
+	---@param list unknown[]
+	---@param value unknown[]
+	---@return integer?
+	local function tableFind(list, value)
+		for i, v in ipairs(list) do
+			if v == value then
+				return i
+			end
+		end
+
+		return nil
+	end
+
+	---@param config { [string]: any }
+	---@param key string
+	---@param primary lls-addon.path-getter
+	---@param secondary lls-addon.path-getter
+	---@param nested boolean
+	---@return any[]
+	local function getConfigArray(config, key, primary, secondary, nested)
+		local oldValue1 = primary.get(config, key)
+		local oldValue1_isArray = json.isArray(oldValue1)
+		local oldValue2 = secondary.get(config, key)
+		local oldValue2_isArray = json.isArray(oldValue2)
+		if oldValue1_isArray and oldValue2_isArray then
+			secondary.set(config, key, nil)
+			extend(nested, oldValue1, unnest2(oldValue2))
+			return oldValue1
+		elseif oldValue2_isArray then
+			return oldValue2
+		elseif oldValue1_isArray then
+			return oldValue1
+		else
+			local list = json.array({})
+			primary.set(config, key, list)
+			return list
 		end
 	end
 
-	return nil
-end
-
----@param pointsToWrongVersion fun(path: string): boolean
----@param config { [string]: any }
----@param configEntries lls-addon.config-entry[]
----@param luarcType "vscode settings" | "luarc"
-local function applyConfigEntries(pointsToWrongVersion, config, configEntries, luarcType)
-	local prefix = ""
-	local nested ---@type boolean
-	if luarcType == "vscode settings" then
-		prefix = "Lua."
-		nested = false
-	elseif luarcType == "luarc" then
-		nested = true
-	else
-		-- luacov: disable
-		error("Unreachable: Unknown config file type " .. tostring(luarcType))
-		-- luacov: enable
-	end
-
-	local primary, secondary ---@type lls-addon.path-getter, lls-addon.path-getter
-	if nested then
-		primary, secondary = nestedPath, unnestedPath
-	else
-		primary, secondary = unnestedPath, nestedPath
-	end
-
-	for _, entry in ipairs(configEntries) do
-		local action = entry.action
-		if action == "prepend" or action == "append" then
-			---@cast entry lls-addon.config-entry.prepend
-			local key, value = prefix .. entry.key, entry.value
-			local list ---@type any[]
-			local oldValue1 = primary.get(config, key)
-			local oldValue1_isArray = json.isArray(oldValue1)
-			local oldValue2 = secondary.get(config, key)
-			local oldValue2_isArray = json.isArray(oldValue2)
-			if oldValue1_isArray and oldValue2_isArray then
-				secondary.set(config, key, nil)
-				extend(nested, oldValue1, unnest2(oldValue2))
-				list = oldValue1
-			elseif oldValue2_isArray then
-				list = oldValue2
-			elseif oldValue1_isArray then
-				list = oldValue1
-			else
-				list = json.array({})
-				primary.set(config, key, list)
-			end
-
-			if not entry.dedup or not tableFind(list, value) then
-				if action == "prepend" then
-					table.insert(list, 1, value)
-				else
-					table.insert(list, value)
-				end
-			end
-		elseif action == "merge" then
-			---@cast entry lls-addon.config-entry.merge
-			local value = unnest2(entry.value)
-			if prefix ~= "" then
-				local prefixedValue = json.object({})
-				for k, v in pairs(value) do
-					prefixedValue[prefix .. k] = v
-				end
-				extend(nested, config, prefixedValue)
-			else
-				extend(nested, config, value)
-			end
-		elseif action == "remove-deleted-versions" then
-			---@cast entry lls-addon.config-entry.remove-deleted-versions
-			local key = prefix .. entry.key
-
-			local list ---@type string[]
-			do
-				local oldValue1 = primary.get(config, key)
-				local oldValue1_isArray = json.isArray(oldValue1)
-				local oldValue2 = secondary.get(config, key)
-				local oldValue2_isArray = json.isArray(oldValue2)
-				if oldValue1_isArray and oldValue2_isArray then
-					secondary.set(config, key, nil)
-					extend(nested, oldValue1, unnest2(oldValue2))
-					list = oldValue1
-				elseif oldValue2_isArray then
-					list = oldValue2
-				elseif oldValue1_isArray then
-					list = oldValue1
-				else
-					list = json.array({})
-					primary.set(config, key, list)
-				end
-			end
-
-			for i = #list, 1, -1 do
-				local v = list[i]
-				if pointsToWrongVersion(v) then
-					table.remove(list, i)
-				end
-			end
-		elseif action == "set" then
-			---@cast entry lls-addon.config-entry.set
-			local key, value = prefix .. entry.key, entry.value
-			local oldValue1 = primary.get(config, key)
-			local oldValue2 = secondary.get(config, key)
-			if oldValue1 ~= nil and oldValue2 ~= nil then
-				secondary.set(config, key, nil)
-				primary.set(config, key, value)
-			elseif oldValue2 ~= nil then
-				secondary.set(config, key, value)
-			else
-				primary.set(config, key, value)
-			end
+	---@param pointsToWrongVersion fun(path: string): boolean
+	---@param config { [string]: any }
+	---@param configEntries lls-addon.config-entry[]
+	---@param luarcType "vscode settings" | "luarc"
+	local function applyConfigEntries(pointsToWrongVersion, config, configEntries, luarcType)
+		local prefix ---@type string
+		local nested ---@type boolean
+		if luarcType == "vscode settings" then
+			prefix = "Lua."
+			nested = false
+		elseif luarcType == "luarc" then
+			prefix = ""
+			nested = true
 		else
 			-- luacov: disable
-			error("Unreachable: unknown action " .. tostring(action))
+			error("Unreachable: Unknown config file type " .. tostring(luarcType))
 			-- luacov: enable
 		end
-	end
-end
 
----@param rockspec luarocks.Rockspec
----@param luarcFiles lls-addon.luarc-file[]
----@param configEntries lls-addon.config-entry[]
-local function installLuarcFiles(rockspec, luarcFiles, configEntries)
-	local pointsToWrongVersion
-	do
-		local projectDir = getProjectDir()
-		local packageDir = dir.path(path.rocks_dir(), rockspec.package)
-		local packageDirLen = string.len(packageDir)
-		local currentVersionDir = dir.path(packageDir, rockspec.version)
-		local currentVersionDirLen = string.len(currentVersionDir)
+		local primary, secondary ---@type lls-addon.path-getter, lls-addon.path-getter
+		if nested then
+			primary, secondary = nestedPath, unnestedPath
+		else
+			primary, secondary = unnestedPath, nestedPath
+		end
 
-		function pointsToWrongVersion(installPath)
-			local absPath = fs.absolute_name(installPath, projectDir)
-			return string.sub(absPath, 1, packageDirLen) == packageDir
-				and string.sub(absPath, 1, currentVersionDirLen) ~= currentVersionDir
+		local function getConfigArray2(key)
+			return getConfigArray(config, key, primary, secondary, nested)
+		end
+
+		for _, entry in ipairs(configEntries) do
+			local action = entry.action
+			if action == "prepend" or action == "append" then
+				---@cast entry lls-addon.config-entry.prepend | lls-addon.config-entry.append
+				local key, value = prefix .. entry.key, entry.value
+				local list = getConfigArray2(key)
+
+				if not entry.dedup or not tableFind(list, value) then
+					if action == "prepend" then
+						table.insert(list, 1, value)
+					else
+						table.insert(list, value)
+					end
+				end
+			elseif action == "merge" then
+				---@cast entry lls-addon.config-entry.merge
+				local value = unnest2(entry.value)
+				if prefix ~= "" then
+					local prefixedValue = json.object({})
+					for k, v in pairs(value) do
+						prefixedValue[prefix .. k] = v
+					end
+					extend(nested, config, prefixedValue)
+				else
+					extend(nested, config, value)
+				end
+			elseif action == "remove-deleted-versions" then
+				---@cast entry lls-addon.config-entry.remove-deleted-versions
+				local key = prefix .. entry.key
+
+				local list = getConfigArray2(key) --[[@as unknown[] ]]
+				for i = #list, 1, -1 do
+					local v = list[i]
+					if type(v) ~= "string" or pointsToWrongVersion(v) then
+						table.remove(list, i)
+					end
+				end
+			elseif action == "set" then
+				---@cast entry lls-addon.config-entry.set
+				local key, value = prefix .. entry.key, entry.value
+				local oldValue1 = primary.get(config, key)
+				local oldValue2 = secondary.get(config, key)
+				if oldValue1 ~= nil and oldValue2 ~= nil then
+					secondary.set(config, key, nil)
+					primary.set(config, key, value)
+				elseif oldValue2 ~= nil then
+					secondary.set(config, key, value)
+				else
+					primary.set(config, key, value)
+				end
+			else
+				-- luacov: disable
+				error("Unreachable: unknown action " .. tostring(action))
+				-- luacov: enable
+			end
 		end
 	end
 
-	for _, luarcFile in ipairs(luarcFiles) do
-		local type = luarcFile.type
-		local path = luarcFile.path
-		log.info(string.format("writing to %s: %s", type, path))
-		local oldConfig = readOrCreateLuarc(path)
-		applyConfigEntries(pointsToWrongVersion, oldConfig, configEntries, type)
-		json.write(path, oldConfig, { sortKeys = true })
+	---@param rockspec luarocks.Rockspec
+	---@param luarcFiles lls-addon.luarc-file[]
+	---@param configEntries lls-addon.config-entry[]
+	function installLuarcFiles(rockspec, luarcFiles, configEntries)
+		local pointsToWrongVersion
+		do
+			local projectDir = getProjectDir()
+			local packageDir = dir.path(path.rocks_dir(), rockspec.package)
+			local packageDirLen = string.len(packageDir)
+			local currentVersionDir = dir.path(packageDir, rockspec.version)
+			local currentVersionDirLen = string.len(currentVersionDir)
+
+			function pointsToWrongVersion(installPath)
+				local absPath = fs.absolute_name(installPath, projectDir)
+				return string.sub(absPath, 1, packageDirLen) == packageDir
+					and string.sub(absPath, 1, currentVersionDirLen) ~= currentVersionDir
+			end
+		end
+
+		for _, luarcFile in ipairs(luarcFiles) do
+			local type = luarcFile.type
+			local path = luarcFile.path
+			log.info(string.format("writing to %s: %s", type, path))
+			local oldConfig = readOrCreateLuarc(path)
+			applyConfigEntries(pointsToWrongVersion, oldConfig, configEntries, type)
+			json.write(path, oldConfig, { sortKeys = true })
+		end
 	end
+	M.installLuarcFiles = installLuarcFiles
 end
-M.installLuarcFiles = installLuarcFiles
 
 ---does two things:
 ---- copies the library/, config.json and plugin.lua into the rock's install
