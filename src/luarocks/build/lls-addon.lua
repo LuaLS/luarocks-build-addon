@@ -35,7 +35,7 @@ local FALSY_STRINGS = {
 local function assertContext(context, s, msg, ...)
 	-- luacov: disable
 	if not s then
-		error(context .. ": " .. msg, 2)
+		error(context .. ": " .. tostring(msg), 2)
 	end
 	return s, msg, ...
 	-- luacov: enable
