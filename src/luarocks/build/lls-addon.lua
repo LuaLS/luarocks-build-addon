@@ -167,13 +167,13 @@ local function getInstallDir(projectDir, rockspec, env)
 end
 M.getInstallDir = getInstallDir
 
----@class lls-addon.install-entry
----@field type "file" | "directory"
----@field source string
----@field destination string
-
 local installFiles
 do
+	---@class lls-addon.install-entry
+	---@field type "file" | "directory"
+	---@field source string
+	---@field destination string
+
 	---@param source string
 	---@param destination string
 	local function copyFile(source, destination)
@@ -215,40 +215,40 @@ do
 	end
 end
 
----@class lls-addon.config-entry.append
----@field action "append"
----@field key string
----@field dedup boolean
----@field value unknown
-
----@class lls-addon.config-entry.prepend
----@field action "prepend"
----@field key string
----@field dedup boolean
----@field value unknown
-
----@class lls-addon.config-entry.set
----@field action "set"
----@field key string
----@field value unknown
-
----@class lls-addon.config-entry.merge
----@field action "merge"
----@field value { [string]: unknown }
-
----@class lls-addon.config-entry.remove-deleted-versions
----@field action "remove-deleted-versions"
----@field key string
-
----@alias lls-addon.config-entry
----| lls-addon.config-entry.append
----| lls-addon.config-entry.prepend
----| lls-addon.config-entry.set
----| lls-addon.config-entry.merge
----| lls-addon.config-entry.remove-deleted-versions
-
 local compileLuarc
 do
+	---@class lls-addon.config-entry.append
+	---@field action "append"
+	---@field key string
+	---@field dedup boolean
+	---@field value unknown
+
+	---@class lls-addon.config-entry.prepend
+	---@field action "prepend"
+	---@field key string
+	---@field dedup boolean
+	---@field value unknown
+
+	---@class lls-addon.config-entry.set
+	---@field action "set"
+	---@field key string
+	---@field value unknown
+
+	---@class lls-addon.config-entry.merge
+	---@field action "merge"
+	---@field value { [string]: unknown }
+
+	---@class lls-addon.config-entry.remove-deleted-versions
+	---@field action "remove-deleted-versions"
+	---@field key string
+
+	---@alias lls-addon.config-entry
+	---| lls-addon.config-entry.append
+	---| lls-addon.config-entry.prepend
+	---| lls-addon.config-entry.set
+	---| lls-addon.config-entry.merge
+	---| lls-addon.config-entry.remove-deleted-versions
+
 	---@param sourcePath string
 	---@return { [string]: any } configSettings
 	local function loadConfigSettings(sourcePath)
