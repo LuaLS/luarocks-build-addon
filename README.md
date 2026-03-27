@@ -24,6 +24,25 @@ End-users can manage addon installations using the LuaRocks CLI.
 - `luarocks --lua-version 5.5 show an-addon` - view information about `an-addon`
 - etc.
 
+> [!NOTE]
+> To help with remembering to add the `--lua-version 5.5` argument, it may be helpful to add an alias somewhere in your PATH for the command. e.g. on Unix,
+>
+> ```sh
+> #!env bash
+> # /in/PATH/lls-addons
+> luarocks --lua-version 5.5 "$@"
+> ```
+>
+> and on Windows,
+>
+> ```bat
+> @ECHO OFF
+> REM C:\in\PATH\lls-addons.bat
+> luarocks --lua-version 5.5 %*
+> ```
+>
+> Then you could just install `an-addon` using `lls-addons install an-addon`.
+
 Users can also browse addons online from https://luarocks.org/m/lls-addons.
 
 ### Variables
