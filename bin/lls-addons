@@ -1,0 +1,66 @@
+#!/usr/bin/env lua
+local PATH_SEP = package.config:sub(3, 3)
+
+local Q
+if PATH_SEP == "\\" then
+	-- copied from luarocks/fs/win32.lua
+	function Q(arg)
+		assert(type(arg) == "string")
+		return "'" .. arg:gsub("'", "'\\''") .. "'"
+	end
+else
+	-- copied from luarocks/fs/unix.lua
+	local function split_root(pathname)
+		local drive = ""
+		local root = ""
+		local rest
+
+		local unquoted = pathname:match("^['\"](.*)['\"]$")
+		if unquoted then
+			pathname = unquoted
+		end
+
+		if pathname:match("^.:") then
+			drive = pathname:sub(1, 2)
+			pathname = pathname:sub(3)
+		end
+
+		if pathname:match("^[\\/]") then
+			root = pathname:sub(1, 1)
+			rest = pathname:sub(2)
+		else
+			rest = pathname
+		end
+
+		return drive, root, rest
+	end
+
+	function Q(arg)
+		assert(type(arg) == "string")
+		-- Use Windows-specific directory separator for paths.
+		-- Paths should be converted to absolute by now.
+		local drive, root, rest = split_root(arg)
+		if root ~= "" then
+			arg = arg:gsub("/", "\\")
+		end
+		if arg == "\\" then
+			return "\\" -- CHDIR needs special handling for root dir
+		end
+		-- URLs and anything else
+		arg = arg:gsub('\\(\\*)"', '\\%1%1"')
+		arg = arg:gsub("\\+$", "%0%0")
+		arg = arg:gsub('"', '\\"')
+		arg = arg:gsub("(\\*)%%", '%1%1"%%"')
+		return '"' .. arg .. '"'
+	end
+end
+
+local cmd = { "luarocks", "--lua-version 5.5", ... }
+for i = 3, select("#", ...) + 2 do
+	cmd[i] = Q(cmd[i])
+end
+
+local cmdStr = table.concat(cmd, " ")
+
+print(cmdStr)
+os.exit(_VERSION == "Lua 5.1" and os.execute(cmdStr) or select(3, os.execute(cmdStr)))

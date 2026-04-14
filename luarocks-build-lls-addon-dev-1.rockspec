@@ -21,3 +21,11 @@ test_dependencies = {
 	"inspect ~> 3.1",
 	"md5 ~> 1.3",
 }
+
+build = {
+	install = {
+		bin = {
+			["lls-addons"] = "bin/lls-addons",
+		},
+	},
+}
