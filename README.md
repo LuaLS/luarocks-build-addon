@@ -14,34 +14,19 @@ Its effects are as follows:
 
 ## Usage for End-Users
 
-> [!NOTE]
-> End-users do not need to install `luarocks-build-lls-addon`. That will be done automatically when installing an addon for the first time.
+Installing `luarocks-build-lls-addon` directly will add the `lls-addons` binary in the `bin/` folder of the nearest rocks tree, which you can find by running `luarocks` without any arguments. The binary wraps the LuaRocks found on your PATH and prepends `--lua-version 5.5` to its arguments. This is required for addons because LuaLS runs on Lua 5.5.
 
-End-users can manage addon installations using the LuaRocks CLI.
+Commands you can run with `lls-addons`:
 
-- `luarocks --lua-version 5.5 install an-addon` - install or update `an-addon`
-- `luarocks --lua-version 5.5 remove an-addon` - remove `an-addon`
-- `luarocks --lua-version 5.5 show an-addon` - view information about `an-addon`
+- `lls-addons install an-addon` - install or update `an-addon`
+- `lls-addons remove an-addon` - remove `an-addon`
+- `lls-addons show an-addon` - view information about `an-addon`
 - etc.
 
 > [!NOTE]
-> To help with remembering to add the `--lua-version 5.5` argument, it may be helpful to add an alias somewhere in your PATH for the command. e.g. on Unix,
+> It is possible to install addons without `lls-addons`, just remember to always prepend `--lua-version 5.5`.
 >
-> ```sh
-> #!env bash
-> # /in/PATH/lls-addons
-> luarocks --lua-version 5.5 "$@"
-> ```
->
-> and on Windows,
->
-> ```bat
-> @ECHO OFF
-> REM C:\in\PATH\lls-addons.bat
-> luarocks --lua-version 5.5 %*
-> ```
->
-> Then you could just install `an-addon` using `lls-addons install an-addon`.
+> `lls-addons` will always print the command it executed before any output.
 
 Users can also browse addons online from https://luarocks.org/m/lls-addons.
 
