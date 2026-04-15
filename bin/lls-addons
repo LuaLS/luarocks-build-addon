@@ -1,8 +1,10 @@
 #!/usr/bin/env lua
-local PATH_SEP = package.config:sub(3, 3)
+local sysdetect = require("luarocks.core.sysdetect")
+
+local system = sysdetect.detect()
 
 local Q
-if PATH_SEP == "\\" then
+if system == "windows" then
 	-- copied from luarocks/fs/win32.lua
 	function Q(arg)
 		assert(type(arg) == "string")
@@ -55,7 +57,7 @@ else
 	end
 end
 
-local cmd = { "luarocks", "--lua-version 5.5", ... }
+local cmd = { "luarocks", Q("--lua-version 5.5"), ... }
 for i = 3, select("#", ...) + 2 do
 	cmd[i] = Q(cmd[i])
 end
